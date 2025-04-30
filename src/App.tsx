@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { ApiStatusProvider } from './context/ApiStatusContext'
 import { ShortcutProvider } from './context/ShortcutContext'
 import { AnimatePresence } from 'framer-motion'
 import MainLayout from './layouts/MainLayout'
@@ -99,11 +100,13 @@ const App: React.FC = () => {
     <AuthProvider>
       <ThemeProvider>
         <ShortcutProvider>
-        <ToastProvider>
-            <Routes>
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="*" element={<ProtectedContent />} />
-            </Routes>
+          <ToastProvider>
+            <ApiStatusProvider>
+              <Routes>
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="*" element={<ProtectedContent />} />
+              </Routes>
+            </ApiStatusProvider>
           </ToastProvider>
         </ShortcutProvider>
       </ThemeProvider>

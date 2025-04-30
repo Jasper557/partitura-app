@@ -16,7 +16,20 @@ import {
   HelpCircle,
   MousePointer,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart,
+  Bell,
+  Shield,
+  Keyboard,
+  MessageCircle,
+  Clock,
+  CheckCircle,
+  Users,
+  Mic,
+  Filter,
+  PieChart,
+  ArrowUpRight,
+  CalendarDays
 } from 'lucide-react'
 import { Page } from '../types/index'
 import useScrollReset from '../hooks/useScrollReset'
@@ -126,12 +139,12 @@ const Documentation: React.FC<{
                 Access your sheet music library, upload new scores, and manage your collection.
               </Feature>
               
-              <Feature icon={<BookOpen size={20} />} title="Practice">
-                Track your practice sessions, set goals, and monitor your progress.
-              </Feature>
-              
               <Feature icon={<Calendar size={20} />} title="Calendar">
                 Plan your practice schedule and musical events in a calendar view.
+              </Feature>
+              
+              <Feature icon={<BarChart size={20} />} title="Dashboard">
+                View statistics and analytics about your practice routines and music collection.
               </Feature>
               
               <Feature icon={<Settings size={20} />} title="Settings">
@@ -158,6 +171,7 @@ const Documentation: React.FC<{
               
               <Feature icon={<Star size={20} />} title="Favorites">
                 Mark your most used sheet music as favorites for quick access.
+                Favorited pieces appear at the top of your collection for easy retrieval.
               </Feature>
             </Subsection>
             
@@ -199,6 +213,131 @@ const Documentation: React.FC<{
               <Feature icon={<Download size={20} />} title="Download">
                 Download the current PDF to your device for offline use by clicking the download button
                 in the bottom toolbar.
+              </Feature>
+            </Subsection>
+          </Section>
+          
+          <Section title="Calendar">
+            <p className="mb-4">
+              The Calendar provides a visual schedule of all your musical activities and practice sessions.
+            </p>
+            
+            <Subsection title="Event Management" icon={<Calendar size={18} />}>
+              <Feature icon={<Clock size={20} />} title="Practice Session Planning">
+                Schedule practice sessions by clicking on any date in the calendar.
+                Set start and end times, add descriptions, and link sessions to specific sheet music in your collection.
+              </Feature>
+
+              <Feature icon={<Filter size={20} />} title="Event Filtering">
+                Filter events by type to focus on specific activities:
+                <ul className="list-disc ml-5 mt-2">
+                  <li>Practice Sessions - Your personal practice time</li>
+                  <li>Concerts - Upcoming performances</li>
+                  <li>Lessons - Music instruction sessions</li>
+                  <li>Rehearsals - Group practice sessions</li>
+                  <li>Recitals - Formal performances</li>
+                </ul>
+              </Feature>
+
+              <Feature icon={<CheckCircle size={20} />} title="Completion Tracking">
+                Mark practice sessions as complete to track your progress.
+                Completed events are visually distinguished in the calendar view for easy tracking.
+              </Feature>
+            </Subsection>
+            
+            <Subsection title="Calendar View" icon={<CalendarDays size={18} />}>
+              <Feature icon={<Mic size={20} />} title="Event Types">
+                Different event types are color-coded and use distinctive icons:
+                <ul className="list-disc ml-5 mt-2">
+                  <li>Practice Sessions - Blue with music note icon</li>
+                  <li>Concerts - Red with microphone icon</li>
+                  <li>Lessons - Green with book icon</li>
+                  <li>Rehearsals - Purple with users icon</li>
+                  <li>Recitals - Orange with music icon</li>
+                </ul>
+              </Feature>
+
+              <Feature icon={<Users size={20} />} title="Event Details">
+                Click on any event to view its full details, make edits, or delete it.
+                The event detail view shows all information about the event, including any linked sheet music.
+              </Feature>
+
+              <Feature icon={<ChevronLeft size={20} />} title="Month Navigation">
+                Navigate between months using the arrow buttons at the top of the calendar.
+                The current date is highlighted for easy reference, and today's date is always marked.
+              </Feature>
+            </Subsection>
+          </Section>
+          
+          <Section title="Dashboard">
+            <p className="mb-4">
+              The Dashboard provides an overview of your practice statistics and performance metrics.
+            </p>
+            
+            <Subsection title="Practice Analytics" icon={<BarChart size={18} />}>
+              <Feature icon={<Clock size={20} />} title="Practice Time Statistics">
+                View your total practice time, average session duration, and practice trends over time.
+                The bar chart visualizes your daily practice minutes, giving you a clear picture of your practice patterns.
+              </Feature>
+
+              <Feature icon={<PieChart size={20} />} title="Practice Session Overview">
+                See a breakdown of your completed practice sessions versus planned sessions.
+                Track your practice consistency with metrics showing your completion rate.
+              </Feature>
+
+              <Feature icon={<CalendarDays size={20} />} title="Time Period Selection">
+                Customize your dashboard view by selecting different time periods:
+                <ul className="list-disc ml-5 mt-2">
+                  <li>This Week - Focus on your current week's progress</li>
+                  <li>Last Week - Review your previous week's activities</li>
+                  <li>Last Month - Get a monthly perspective on your practice</li>
+                  <li>Last Quarter - View three months of data at once</li>
+                  <li>Last Year - See your annual practice trends</li>
+                  <li>All Time - Analyze your entire practice history</li>
+                </ul>
+              </Feature>
+            </Subsection>
+            
+            <Subsection title="Repertoire Insights" icon={<Music size={18} />}>
+              <Feature icon={<ArrowUpRight size={20} />} title="Recent Practice Activity">
+                See which pieces you've practiced most recently and how frequently you've worked on them.
+                This helps you identify neglected pieces in your repertoire.
+              </Feature>
+
+              <Feature icon={<CheckCircle size={20} />} title="Progress Tracking">
+                Monitor your overall progress with all pieces in your repertoire.
+                The dashboard highlights your practice consistency and helps identify areas for improvement.
+              </Feature>
+            </Subsection>
+          </Section>
+          
+          <Section title="Additional Pages">
+            <Subsection title="Settings Pages" icon={<Settings size={18} />}>
+              <Feature icon={<Keyboard size={20} />} title="Keyboard Shortcuts">
+                View and customize keyboard shortcuts for faster navigation and controls throughout the app.
+                Access this page from the Settings menu.
+              </Feature>
+              
+              <Feature icon={<Bell size={20} />} title="Notification Settings">
+                Configure how and when you receive notifications about practice reminders, upcoming events,
+                and other important updates.
+              </Feature>
+              
+              <Feature icon={<Shield size={20} />} title="Privacy Settings">
+                Manage your privacy preferences and data settings. Control what information is stored
+                and how it's used within the application.
+              </Feature>
+            </Subsection>
+            
+            <Subsection title="Support" icon={<HelpCircle size={18} />}>
+              <Feature icon={<MessageCircle size={20} />} title="Contact Support">
+                Reach out to our support team for help with any issues or questions you have about
+                using Partitura. Access the contact form from the Settings menu.
+              </Feature>
+              
+              <Feature icon={<BookOpen size={20} />} title="Documentation">
+                This documentation page provides detailed information about all features and
+                how to use them effectively.
               </Feature>
             </Subsection>
           </Section>

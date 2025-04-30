@@ -18,6 +18,7 @@ import EventDetail from '../components/calendar/EventDetail'
 import { fetchSheetMusic } from '../services/sheetMusicService'
 import PageTransition from '../components/PageTransition'
 import { Filter, X } from 'lucide-react'
+import withApiAvailability from '../hoc/withApiAvailability'
 
 const Calendar: React.FC = () => {
   const { isDarkMode } = useTheme()
@@ -413,4 +414,7 @@ const Calendar: React.FC = () => {
   )
 }
 
-export default Calendar 
+// Export with API availability check
+export default withApiAvailability(Calendar, {
+  message: 'Practice Calendar Unavailable'
+}); 

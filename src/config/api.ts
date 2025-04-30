@@ -8,6 +8,21 @@ import { getAuthToken } from '../services/userService';
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
+ * Error class for API-specific errors
+ */
+export class ApiError extends Error {
+  status: number;
+  isConnectionError: boolean;
+
+  constructor(message: string, status: number = 0, isConnectionError: boolean = false) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.isConnectionError = isConnectionError;
+  }
+}
+
+/**
  * Helper function to handle API response errors
  */
 export const handleApiError = async (response: Response) => {
@@ -18,7 +33,7 @@ export const handleApiError = async (response: Response) => {
       errorData?.message || 
       `API Error: ${response.status} ${response.statusText}`;
     
-    throw new Error(errorMessage);
+    throw new ApiError(errorMessage, response.status);
   }
   
   return response;
@@ -48,10 +63,17 @@ export const apiRequest = async <T>(
     const url = `${API_URL}${endpoint}`;
     const headers = await getAuthHeaders(options.headers);
     
+    // Set a timeout to detect unavailable API
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     const response = await fetch(url, {
       ...options,
       headers,
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     
     await handleApiError(response);
     
@@ -61,8 +83,22 @@ export const apiRequest = async <T>(
     }
     
     return await response.json();
-  } catch (error) {
+  } catch (error: any) {
     console.error('API request failed:', error);
+    
+    // Handle network errors and timeouts
+    if (
+      error.name === 'AbortError' || 
+      error.name === 'TypeError' || 
+      error.message === 'Failed to fetch'
+    ) {
+      throw new ApiError(
+        'Unable to connect to the Partitura API.',
+        0,
+        true
+      );
+    }
+    
     throw error;
   }
 };
@@ -85,17 +121,38 @@ export const uploadFile = async <T>(
       ...options.headers,
     };
     
+    // Set a timeout to detect unavailable API
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
       ...options,
       headers,
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     
     await handleApiError(response);
     return await response.json();
-  } catch (error) {
+  } catch (error: any) {
     console.error('File upload failed:', error);
+    
+    // Handle network errors and timeouts
+    if (
+      error.name === 'AbortError' || 
+      error.name === 'TypeError' || 
+      error.message === 'Failed to fetch'
+    ) {
+      throw new ApiError(
+        'Unable to connect to the Partitura API.',
+        0,
+        true
+      );
+    }
+    
     throw error;
   }
 }; 

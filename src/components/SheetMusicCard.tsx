@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Heart, Edit2, Check, X, FileText, Trash2 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { SheetMusicItem } from '../types/index'
@@ -25,24 +25,28 @@ interface SheetMusicCardProps {
 const HeartParticle: React.FC<{ 
   x: number; 
   y: number; 
-  isFavoriting: boolean 
-}> = ({ x, y, isFavoriting }) => {
-  const randomTranslate = () => {
-    const angle = Math.random() * Math.PI * 2;
-    const distance = 20 + Math.random() * 30;
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance
-    };
-  };
-
-  const translate = randomTranslate();
+  isFavoriting: boolean;
+  index: number;
+}> = ({ x, y, isFavoriting, index }) => {
+  // Pre-calculate random translate values based on index for consistent animation
+  const angle = (Math.PI * 2 * index) / 6; // Evenly distribute particles in a circle
+  const distance = 20 + (index % 3) * 10; // Vary distances slightly
+  
+  const translateX = Math.cos(angle) * distance;
+  const translateY = Math.sin(angle) * distance;
+  
+  // Use CSS variables for hardware-accelerated animations
   const style = {
-    '--tx': `${translate.x}px`,
-    '--ty': `${translate.y}px`,
-    left: x + 'px',
-    top: y + 'px',
-    fontSize: '14px'
+    '--tx': `${translateX}px`,
+    '--ty': `${translateY}px`,
+    left: `calc(50% - 7px)`,
+    top: `calc(50% - 7px)`,
+    position: 'absolute',
+    fontSize: '14px',
+    pointerEvents: 'none',
+    transform: 'translate3d(0, 0, 0)',
+    willChange: 'transform, opacity',
+    zIndex: 60,
   } as React.CSSProperties;
 
   return (
@@ -279,9 +283,10 @@ const SheetMusicCard: React.FC<SheetMusicCardProps> = ({
   // State for animations
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEntering, setIsEntering] = useState(true);
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [showParticles, setShowParticles] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
   const [deletePieces, setDeletePieces] = useState<number[]>([]);
+  const heartButtonRef = useRef<HTMLButtonElement>(null);
   
   // PDF states
   const { thumbnail, isLoading } = usePdfThumbnail(item.pdfPath);
@@ -319,33 +324,26 @@ const SheetMusicCard: React.FC<SheetMusicCardProps> = ({
   };
 
   /**
-   * Create heart particles for favorite animation
-   */
-  const createParticles = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const newParticles = Array.from({ length: 6 }, (_, i) => ({
-      id: Date.now() + i,
-      x,
-      y
-    }));
-    
-    setParticles(prev => [...prev, ...newParticles]);
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => !newParticles.find(np => np.id === p.id)));
-    }, 600);
-  };
-
-  /**
    * Toggle favorite status with animation
    */
   const toggleFavorite = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    
+    // Don't allow rapid toggling which could cause performance issues
+    if (showParticles) return;
+    
     setIsFavoriting(!item.isFavorite);
-    createParticles(e);
-    onUpdate(item.id, { isFavorite: !item.isFavorite });
+    setShowParticles(true);
+    
+    // Hide particles after animation completes
+    setTimeout(() => {
+      setShowParticles(false);
+    }, 600);
+    
+    // Update the item's favorite status
+    requestAnimationFrame(() => {
+      onUpdate(item.id, { isFavorite: !item.isFavorite });
+    });
   };
 
   return (
@@ -401,6 +399,7 @@ const SheetMusicCard: React.FC<SheetMusicCardProps> = ({
           {/* Favorite button */}
           <div className="absolute top-2 right-2 z-50">
             <button
+              ref={heartButtonRef}
               onClick={toggleFavorite}
               className={`
                 heart-button
@@ -409,20 +408,24 @@ const SheetMusicCard: React.FC<SheetMusicCardProps> = ({
                 shadow-md backdrop-blur-sm
                 transition-colors duration-200
                 ${item.isFavorite ? 'text-red-500 active' : 'text-gray-400 hover:text-red-500'}
+                relative
               `}
             >
               <Heart 
                 fill={item.isFavorite ? "currentColor" : "none"} 
                 size={20}
               />
-              {particles.map(particle => (
-                <HeartParticle 
-                  key={particle.id} 
-                  x={particle.x} 
-                  y={particle.y} 
-                  isFavoriting={isFavoriting}
-                />
-              ))}
+              {showParticles && (
+                Array.from({ length: 4 }, (_, i) => (
+                  <HeartParticle 
+                    key={i} 
+                    x={0} 
+                    y={0} 
+                    isFavoriting={isFavoriting}
+                    index={i}
+                  />
+                ))
+              )}
             </button>
           </div>
         </div>

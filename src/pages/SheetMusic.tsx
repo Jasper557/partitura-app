@@ -15,6 +15,7 @@ import {
 import { useShortcuts } from '../context/ShortcutContext'
 import useScrollReset from '../hooks/useScrollReset'
 import PageTransition from '../components/PageTransition'
+import withApiAvailability from '../hoc/withApiAvailability'
 
 /**
  * Component for the "Add New" card that appears at the beginning of the sheet music grid
@@ -547,4 +548,7 @@ const SheetMusic: React.FC = () => {
   );
 };
 
-export default SheetMusic; 
+// Export the component wrapped with API availability check
+export default withApiAvailability(SheetMusic, {
+  message: 'Sheet Music Library Unavailable'
+}); 
