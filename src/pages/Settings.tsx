@@ -22,7 +22,7 @@ const SettingSection: React.FC<{
   isDarkMode: boolean
 }> = ({ title, children, isDarkMode }) => (
   <div className="mb-8">
-    <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+    <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-600'}`}>
       {title}
     </h2>
     <div className="space-y-2">
@@ -56,7 +56,7 @@ const SettingRow: React.FC<{
         {icon}
       </div>
       <div>
-        <div className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+        <div className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-600'}`}>
           {title}
         </div>
         {description && (
@@ -90,7 +90,7 @@ const Settings: React.FC<{
         ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}
       `}>
         <div className="max-w-3xl mx-auto">
-          <h1 className={`text-3xl font-bold mb-8 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl font-bold mb-8 ${isDarkMode ? 'text-gray-100' : 'text-gray-600'}`}>
             Settings
           </h1>
 

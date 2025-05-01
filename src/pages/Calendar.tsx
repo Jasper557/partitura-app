@@ -279,7 +279,7 @@ const Calendar: React.FC = () => {
                   flex items-center gap-2 py-2 px-4 rounded-lg
                   ${isDarkMode 
                     ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
                   }
                   transition-colors shadow-sm
                 `}
@@ -305,7 +305,7 @@ const Calendar: React.FC = () => {
                 >
                   <div className="p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className={`font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-600'}`}>
                         Filter Events
                       </h3>
                       {selectedEventTypes.length > 0 && (
@@ -345,7 +345,7 @@ const Calendar: React.FC = () => {
                             onChange={() => toggleEventType(option.type)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
+                          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
                             {option.label}
                           </span>
                         </label>

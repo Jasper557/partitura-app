@@ -286,7 +286,7 @@ const Dashboard: React.FC = () => {
           </p>
           <p className={`
             text-2xl font-bold
-            ${isDarkMode ? 'text-white' : 'text-gray-900'}
+            ${isDarkMode ? 'text-white' : 'text-gray-600'}
           `}>
             {value}{unit}
           </p>
@@ -439,7 +439,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-8">
             <h1 className={`
               text-3xl font-bold
-              ${isDarkMode ? 'text-white' : 'text-gray-900'}
+              ${isDarkMode ? 'text-white' : 'text-gray-700'}
             `}>
               Practice Dashboard
             </h1>
@@ -488,7 +488,7 @@ const Dashboard: React.FC = () => {
                 `}>
                   <h2 className={`
                     text-xl font-semibold mb-6
-                    ${isDarkMode ? 'text-white' : 'text-gray-900'}
+                    ${isDarkMode ? 'text-white' : 'text-gray-600'}
                   `}>
                     Practice Time Overview
                   </h2>
@@ -504,7 +504,7 @@ const Dashboard: React.FC = () => {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className={`
                       text-xl font-semibold
-                      ${isDarkMode ? 'text-white' : 'text-gray-900'}
+                      ${isDarkMode ? 'text-white' : 'text-gray-600'}
                     `}>
                       Recently Practiced Pieces
                     </h2>
@@ -536,7 +536,7 @@ const Dashboard: React.FC = () => {
                           <div>
                             <h3 className={`
                               font-medium
-                              ${isDarkMode ? 'text-white' : 'text-gray-900'}
+                              ${isDarkMode ? 'text-white' : 'text-gray-600'}
                             `}>
                               {piece.title}
                             </h3>

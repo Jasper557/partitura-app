@@ -36,7 +36,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
           {icon}
         </div>
         <div>
-          <h3 className={`font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+          <h3 className={`font-medium mb-1 ${isDarkMode ? 'text-gray-200' : 'text-gray-600'}`}>
             {title}
           </h3>
           {description && (

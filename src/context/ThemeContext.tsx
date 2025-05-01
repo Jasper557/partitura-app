@@ -11,15 +11,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 /**
  * Provider component that manages theme state and syncs with the API.
- * - Initializes with system preference
+ * - Initializes with dark theme as default
  * - Loads user preference when logged in
  * - Syncs changes to database via API
  */
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize with system preference
-  const [isDarkMode, setIsDarkMode] = useState(() => 
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  )
+  // Initialize with dark theme by default
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const { user } = useAuth()
 
   /**

@@ -182,7 +182,7 @@ const AddNewModal: React.FC<{
 
   // Theme-based style classes
   const bgClass = isDarkMode ? 'bg-gray-900' : 'bg-white';
-  const textClass = isDarkMode ? 'text-gray-100' : 'text-gray-900';
+  const textClass = isDarkMode ? 'text-gray-100' : 'text-gray-600';
   const mutedTextClass = isDarkMode ? 'text-gray-400' : 'text-gray-500';
   const borderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
   const inputBgClass = isDarkMode ? 'bg-gray-800' : 'bg-gray-50';
@@ -502,7 +502,7 @@ const SheetMusic: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex justify-between items-center mb-6 sticky top-0 z-10 bg-inherit py-2">
-            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-600'}`}>
               Sheet Music
             </h1>
             <SearchBar

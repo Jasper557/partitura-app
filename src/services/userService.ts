@@ -15,7 +15,7 @@ export const getUserPreferences = async (userId: string): Promise<UserPreference
   } catch (error) {
     console.error('Error fetching user preferences:', error);
     // Return defaults if API fails
-    return { theme: 'light', notifications_enabled: true };
+    return { theme: 'dark', notifications_enabled: true };
   }
 };
 

@@ -157,7 +157,7 @@ const EventForm: React.FC<EventFormProps> = ({
         `}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-600'}`}>
             {isEditing ? `Edit ${eventTypeOptions.find(opt => opt.type === eventType)?.label}` : 'New Event'}
           </h2>
           <button

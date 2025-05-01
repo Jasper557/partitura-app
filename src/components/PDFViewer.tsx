@@ -31,7 +31,6 @@ interface PDFViewerProps {
  * - Page navigation
  * - Zoom controls with mouse wheel support
  * - Fullscreen mode
- * - Visual feedback for zoom limits
  * - PDF download
  * - Keyboard shortcuts support
  */
@@ -56,103 +55,13 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
   const [renderKey, setRenderKey] = useState(0)
   const [animateIn, setAnimateIn] = useState(false)
   
-  // Zoom indicator states
-  const [showWheelZoomIndicator, setShowWheelZoomIndicator] = useState(false)
-  const [zoomIndicatorOpacity, setZoomIndicatorOpacity] = useState(0)
-  const [zoomIndicatorScale, setZoomIndicatorScale] = useState(0.95)
-  const [reachedZoomLimit, setReachedZoomLimit] = useState<'min' | 'max' | null>(null)
-  const [isActivelyZooming, setIsActivelyZooming] = useState(false)
-  
   // Refs
   const viewerRef = useRef<HTMLDivElement>(null)
   const pdfContentRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   
-  // Timers
-  const wheelZoomIndicatorTimer = useRef<NodeJS.Timeout | null>(null)
-  const zoomLimitTimer = useRef<NodeJS.Timeout | null>(null)
-  const zoomActivityTimer = useRef<NodeJS.Timeout | null>(null)
-  
   // Hooks
   const { isShortcutTriggered } = useShortcuts()
-
-  // Utility functions
-
-  /**
-   * Clear all active timers
-   */
-  const clearAllTimers = useCallback(() => {
-    if (wheelZoomIndicatorTimer.current) clearTimeout(wheelZoomIndicatorTimer.current);
-    if (zoomLimitTimer.current) clearTimeout(zoomLimitTimer.current);
-    if (zoomActivityTimer.current) clearTimeout(zoomActivityTimer.current);
-  }, []);
-  
-  /**
-   * Reset zoom indicator state
-   */
-  const resetZoomIndicator = useCallback(() => {
-    setShowWheelZoomIndicator(false);
-    setZoomIndicatorOpacity(0);
-    setZoomIndicatorScale(0.95);
-    setReachedZoomLimit(null);
-    setIsActivelyZooming(false);
-  }, []);
-
-  /**
-   * Show zoom indicator with animation
-   */
-  const showZoomIndicator = useCallback(() => {
-    setShowWheelZoomIndicator(true);
-    requestAnimationFrame(() => {
-      setZoomIndicatorOpacity(1);
-      setZoomIndicatorScale(1);
-    });
-  }, []);
-  
-  /**
-   * Hide zoom indicator with animation
-   */
-  const hideZoomIndicator = useCallback(() => {
-    setZoomIndicatorOpacity(0);
-    setZoomIndicatorScale(0.9);
-    setTimeout(() => {
-      setShowWheelZoomIndicator(false);
-    }, 150);
-  }, []);
-  
-  /**
-   * Show zoom limit feedback
-   */
-  const showZoomLimitFeedback = useCallback((limit: 'min' | 'max') => {
-    setReachedZoomLimit(limit);
-    showZoomIndicator();
-    
-    if (zoomLimitTimer.current) {
-      clearTimeout(zoomLimitTimer.current);
-    }
-    
-    zoomLimitTimer.current = setTimeout(() => {
-      setReachedZoomLimit(null);
-      hideZoomIndicator();
-    }, 600);
-  }, [showZoomIndicator, hideZoomIndicator]);
-
-  /**
-   * Show temporary zoom activity indicator (for mouse wheel only)
-   */
-  const showZoomActivity = useCallback(() => {
-    setIsActivelyZooming(true);
-    showZoomIndicator();
-    
-    if (zoomActivityTimer.current) {
-      clearTimeout(zoomActivityTimer.current);
-    }
-    
-    zoomActivityTimer.current = setTimeout(() => {
-      setIsActivelyZooming(false);
-      hideZoomIndicator();
-    }, 300);
-  }, [showZoomIndicator, hideZoomIndicator]);
 
   // ======= LIFECYCLE & EFFECTS =======
 
@@ -166,29 +75,18 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
     }
   }, [isOpen]);
 
-  // Reset indicator when component visibility changes
-  useEffect(() => {
-    if (!isOpen) {
-      resetZoomIndicator();
-    }
-  }, [isOpen, resetZoomIndicator]);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       document.body.style.overflow = '';
-      clearAllTimers();
     };
-  }, [clearAllTimers]);
+  }, []);
 
   // ======= PDF DOCUMENT HANDLING =======
   
   // Load PDF when component opens
   useEffect(() => {
     if (isOpen && pdfPath) {
-      // Reset state
-      resetZoomIndicator();
-      clearAllTimers();
       setScale(1.0);
       
       // Setup loading state
@@ -228,7 +126,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
         setIsLoading(false);
       }
     }
-  }, [isOpen, pdfPath, clearAllTimers, resetZoomIndicator]);
+  }, [isOpen, pdfPath]);
 
   const handleDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -324,26 +222,18 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
   // ======= ZOOM CONTROLS =======
   
   const zoomIn = useCallback(() => {
-    if (scale >= 3.0) {
-      showZoomLimitFeedback('max');
-      return;
-    }
     setScale(prev => {
       const newScale = Math.min(prev + 0.1, 3.0);
       return newScale;
     });
-  }, [scale, showZoomLimitFeedback]);
+  }, []);
   
   const zoomOut = useCallback(() => {
-    if (scale <= 0.5) {
-      showZoomLimitFeedback('min');
-      return;
-    }
     setScale(prev => {
       const newScale = Math.max(prev - 0.1, 0.5);
       return newScale;
     });
-  }, [scale, showZoomLimitFeedback]);
+  }, []);
   
   // Handle mouse wheel zoom
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -355,75 +245,29 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
       e.preventDefault();
       e.stopPropagation();
       
-      setIsActivelyZooming(true);
-      showZoomIndicator();
-      
       if (e.deltaY < 0) {
-        if (scale >= 3.0) {
-          showZoomLimitFeedback('max');
-          return;
-        }
         setScale(prev => {
           const newScale = prev + 0.05;
           return newScale > 3.0 ? 3.0 : newScale;
         });
       } else {
-        if (scale <= 0.5) {
-          showZoomLimitFeedback('min');
-          return;
-        }
         setScale(prev => {
           const newScale = prev - 0.05;
           return newScale < 0.5 ? 0.5 : newScale;
         });
       }
-      
-      // Hide indicator quickly after mouse wheel stops
-      zoomActivityTimer.current = setTimeout(() => {
-        setIsActivelyZooming(false);
-        hideZoomIndicator();
-      }, 100);
     }
-  }, [useMouseWheelZoom, scale, showZoomIndicator, showZoomLimitFeedback, hideZoomIndicator]);
+  }, [useMouseWheelZoom]);
 
   // ======= EVENT LISTENERS =======
-  
-  // Handle Ctrl key release
-  useEffect(() => {
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if ((e.key === 'Control' || e.key === 'Meta') && isActivelyZooming) {
-        setIsActivelyZooming(false);
-        hideZoomIndicator();
-      }
-    };
-    
-    if (isOpen) {
-      window.addEventListener('keyup', handleKeyUp);
-    }
-    
-    return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [isOpen, isActivelyZooming, hideZoomIndicator]);
   
   // Mouse wheel event listener
   useEffect(() => {
     if (!isOpen) return;
     
-    let wheelStopTimer: NodeJS.Timeout | null = null;
-    
     const captureWheel = (e: WheelEvent) => {
       if (useMouseWheelZoom && (e.ctrlKey || e.metaKey)) {
         handleWheel(e);
-        
-        if (wheelStopTimer) {
-          clearTimeout(wheelStopTimer);
-        }
-        
-        wheelStopTimer = setTimeout(() => {
-          if (isActivelyZooming) {
-            setIsActivelyZooming(false);
-            hideZoomIndicator();
-          }
-        }, 100);
       }
     };
     
@@ -431,17 +275,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
     
     return () => {
       window.removeEventListener('wheel', captureWheel, { capture: true });
-      if (wheelStopTimer) clearTimeout(wheelStopTimer);
-      clearAllTimers();
     };
-  }, [
-    isOpen, 
-    handleWheel, 
-    useMouseWheelZoom, 
-    isActivelyZooming, 
-    hideZoomIndicator, 
-    clearAllTimers
-  ]);
+  }, [isOpen, handleWheel, useMouseWheelZoom]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -527,7 +362,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
   // ======= THEME-BASED STYLES =======
 
   // Theme-based color classes
-  const textClass = isDarkMode ? 'text-gray-200' : 'text-gray-800';
+  const textClass = isDarkMode ? 'text-gray-200' : 'text-gray-600';
   const bgClass = isDarkMode ? 'bg-gray-800' : 'bg-white';
   const borderClass = isDarkMode ? 'border-gray-700' : 'border-gray-200';
   const headerBgClass = isDarkMode ? 'bg-gray-900' : 'bg-gray-50';
@@ -536,47 +371,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
   const errorBgClass = isDarkMode ? 'bg-red-900/20' : 'bg-red-50';
   const errorTextClass = isDarkMode ? 'text-red-300' : 'text-red-600';
   const skeletonBgClass = isDarkMode ? 'bg-gray-700' : 'bg-gray-300';
-
-  // ======= COMPONENT DEFINITIONS =======
-
-  /**
-   * Mouse wheel zoom indicator component
-   */
-  const ZoomIndicator = () => {
-    if (!showWheelZoomIndicator) return null;
-    
-    return (
-      <div 
-        className={`
-          absolute top-4 left-1/2 z-50
-          ${reachedZoomLimit ? 'bg-amber-500/90' : 'bg-blue-500/90'} 
-          text-white px-4 py-2 rounded-full
-          flex items-center gap-2 shadow-lg
-          will-change-transform will-change-opacity
-        `}
-        style={{ 
-          opacity: zoomIndicatorOpacity,
-          transform: `translate(-50%, 0) scale(${zoomIndicatorScale})`,
-          transition: 'opacity 150ms cubic-bezier(0.4, 0.0, 0.2, 1), transform 150ms cubic-bezier(0.18, 0.89, 0.32, 1.28)'
-        }}
-      >
-        {reachedZoomLimit ? (
-          <>
-            <ZoomIn size={16} className={`${reachedZoomLimit === 'max' ? '' : 'hidden'} animate-pulse`} />
-            <ZoomOut size={16} className={`${reachedZoomLimit === 'min' ? '' : 'hidden'} animate-pulse`} />
-            <span className="font-medium text-sm">
-              {reachedZoomLimit === 'max' ? 'Maximum zoom reached' : 'Minimum zoom reached'}
-            </span>
-          </>
-        ) : (
-          <>
-            <MousePointer size={16} className="animate-pulse" />
-            <span className="font-medium text-sm">Zoom: {Math.round(scale * 100)}%</span>
-          </>
-        )}
-      </div>
-    );
-  };
 
   // ======= COMPONENT RENDER =======
 
@@ -662,9 +456,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
             relative
           `}
         >
-          {/* Mouse wheel zoom indicator */}
-          <ZoomIndicator />
-          
           {/* Loading state */}
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-20">

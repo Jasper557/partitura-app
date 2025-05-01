@@ -225,7 +225,7 @@ const EditableText: React.FC<{
         truncate outline-none
         ${isEditing ? 'border-b ' + (isDarkMode ? 'border-gray-600' : 'border-gray-300') : ''}
         ${isTitle 
-          ? `font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`
+          ? `font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-600'}`
           : `text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`
         }
         ${!isEditing ? 'select-none' : ''}
