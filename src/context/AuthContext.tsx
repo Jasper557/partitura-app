@@ -17,9 +17,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    console.log("Auth provider initialized")
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session retrieved:", session ? "Session exists" : "No session")
       setUser(session?.user ?? null)
+      setLoading(false)
+    }).catch(err => {
+      console.error("Error getting session:", err)
       setLoading(false)
     })
 
@@ -27,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session ? "Session exists" : "No session")
       setUser(session?.user ?? null)
       setLoading(false)
     })
@@ -39,23 +46,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true)
       setError(null)
       
+      const callbackUrl = import.meta.env.DEV 
+        ? 'http://localhost:5173/auth/callback'
+        : window.location.origin + '/auth/callback'
+      
+      console.log("Signing in with Google, callback URL:", callbackUrl)
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: import.meta.env.DEV 
-            ? 'http://localhost:5173/auth/callback'
-            : window.location.origin + '/auth/callback'
+          redirectTo: callbackUrl
         }
       })
       
       if (error) {
         console.error('Google sign-in error:', error)
+        setError(error.message)
+        setLoading(false)
         throw error
       }
       
       console.log('Google sign-in response:', data)
     } catch (error) {
       console.error('Error signing in with Google:', error)
+      setLoading(false)
       throw error
     }
   }

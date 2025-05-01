@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react'
+import React, { useState, lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
@@ -34,10 +34,18 @@ const LoadingFallback = () => (
 const AuthCallback = () => {
   const { hash, search } = useLocation();
   
-  // The hash and search params are automatically processed by Supabase
-  // when auth.detectSessionInUrl is true
+  // Add debug console logs to help identify issues
+  console.log('Auth callback received', { hash, search });
   
-  return <Navigate to="/" replace />;
+  // Force reload to ensure the session is properly loaded
+  useEffect(() => {
+    // Give Supabase a moment to process the auth callback
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
+  }, []);
+  
+  return <LoadingFallback />;
 };
 
 const ProtectedContent: React.FC = () => {

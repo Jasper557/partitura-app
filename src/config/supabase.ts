@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const isDev = import.meta.env.DEV
 
 // Calculate the redirect URL based on environment
-const redirectUrl = `${publicUrl || window.location.origin}${isDev ? '' : ''}/auth/callback`
+const redirectUrl = `${publicUrl || window.location.origin}/auth/callback`
 
 // Create Supabase client with appropriate configuration
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -21,15 +21,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'pkce',
+    flowType: 'implicit',
     storage: window.localStorage,
     storageKey: 'partitura-auth',
     debug: true
-  },
-  global: {
-    headers: {
-      'x-redirect-to': redirectUrl
-    }
   }
 })
 
