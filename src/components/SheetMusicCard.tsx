@@ -510,4 +510,4 @@ const SheetMusicCard: React.FC<SheetMusicCardProps> = ({
   );
 };
 
-export default SheetMusicCard; 
+export default React.memo(SheetMusicCard); 

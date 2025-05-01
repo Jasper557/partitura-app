@@ -59,4 +59,4 @@ const NavItem: React.FC<NavItemProps> = ({ icon, text, isExpanded, isActive = fa
   )
 }
 
-export default NavItem 
+export default React.memo(NavItem) 

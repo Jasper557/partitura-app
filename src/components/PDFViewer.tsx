@@ -620,4 +620,4 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
   );
 };
 
-export default PDFViewer;
+export default React.memo(PDFViewer);
