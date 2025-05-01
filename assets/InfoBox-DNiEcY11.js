@@ -1,0 +1,4 @@
+import{j as e}from"./ui-DgCwhHkT.js";import{a as b}from"./index-CFOCruvU.js";const d=({icon:t,children:o,variant:l="info"})=>{const{isDarkMode:r}=b(),s=(()=>{switch(l){case"success":return{box:r?"bg-green-900/30 text-green-400":"bg-green-100 text-green-700",border:"border-green-500"};case"warning":return{box:r?"bg-yellow-900/30 text-yellow-400":"bg-yellow-50 text-yellow-700",border:"border-yellow-500"};case"info":default:return{box:r?"bg-blue-900/20 text-blue-400":"bg-blue-50 text-blue-700",border:"border-blue-500"}}})();return e.jsx("div",{className:`
+      mb-6 p-4 rounded-lg border-l-4 
+      ${s.box} ${s.border}
+    `,children:e.jsxs("div",{className:"flex items-start gap-3",children:[e.jsx("div",{className:"mt-0.5",children:t}),e.jsx("div",{className:"text-sm",children:o})]})})};export{d as I};
