@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const isDev = import.meta.env.DEV
 
 // Calculate the redirect URL based on environment
-const redirectUrl = `${publicUrl || window.location.origin}${isDev ? '' : '/partitura'}/auth/callback`
+const redirectUrl = `${publicUrl || window.location.origin}${isDev ? '' : ''}/auth/callback`
 
 // Create Supabase client with appropriate configuration
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
