@@ -45,7 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           transform-gpu
         `}>
           <img 
-            src="/partitura/assets/icon.png"
+            src="/assets/icon.png"
             alt="Partitura Logo"
             className={`
               w-10 h-10

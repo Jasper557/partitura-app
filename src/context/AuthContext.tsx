@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           redirectTo: import.meta.env.DEV 
             ? 'http://localhost:5173/auth/callback'
-            : window.location.origin + '/partitura/auth/callback'
+            : window.location.origin + '/auth/callback'
         }
       })
       
