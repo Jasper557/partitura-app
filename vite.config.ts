@@ -8,8 +8,8 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
-    // Base path matching GitHub repository name for GitHub Pages deployment
-    base: '/partitura/',
+    // Setting base to root path for Vercel deployment
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
