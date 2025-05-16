@@ -3,9 +3,26 @@ import { getAuthToken } from '../services/userService';
 
 /**
  * Base API URL from environment variables
- * Defaults to localhost:3001 in development
+ * Defaults to localhost:3001/api in development
+ * Note: VITE_API_URL should NOT include the /api suffix
  */
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+/**
+ * Helper function to build a complete API URL, ensuring no duplicate /api segments
+ */
+export const buildApiUrl = (endpoint: string): string => {
+  // Ensure endpoint starts with /
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Check if endpoint already starts with /api
+  if (normalizedEndpoint.startsWith('/api/')) {
+    return `${API_URL}${normalizedEndpoint}`;
+  }
+  
+  // Otherwise, add the /api prefix
+  return `${API_URL}/api${normalizedEndpoint}`;
+}
 
 /**
  * Error class for API-specific errors
@@ -27,11 +44,43 @@ export class ApiError extends Error {
  */
 export const handleApiError = async (response: Response) => {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
+    let errorData: any = null;
+    
+    try {
+      errorData = await response.json();
+    } catch (parseError) {
+      // If the response isn't valid JSON, create a basic error object
+      errorData = { error: `API Error: ${response.status} ${response.statusText}` };
+    }
+    
     const errorMessage = 
       errorData?.error || 
       errorData?.message || 
       `API Error: ${response.status} ${response.statusText}`;
+    
+    // Handle authentication errors specially
+    if (response.status === 401 || response.status === 403) {
+      // Token expired, attempt to refresh the session through Supabase
+      try {
+        const { supabase } = await import('../config/supabase');
+        const { data, error } = await supabase.auth.refreshSession();
+        
+        // If the refresh was successful, return so the original request can be retried
+        if (data?.session && !error) {
+          console.log('Successfully refreshed auth token');
+          // Don't throw the error if refresh succeeded, allowing the request to be retried
+          return 'retry';
+        } else {
+          console.error('Failed to refresh token:', error);
+          // If token can't be refreshed, user will need to re-authenticate
+          window.location.href = '/login';
+        }
+      } catch (refreshError) {
+        console.error('Error refreshing token:', refreshError);
+        // Force redirect to login on critical auth errors
+        window.location.href = '/login';
+      }
+    }
     
     throw new ApiError(errorMessage, response.status);
   }
@@ -57,10 +106,11 @@ export const getAuthHeaders = async (customHeaders: HeadersInit = {}) => {
  */
 export const apiRequest = async <T>(
   endpoint: string, 
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retryCount: number = 0
 ): Promise<T> => {
   try {
-    const url = `${API_URL}${endpoint}`;
+    const url = buildApiUrl(endpoint);
     const headers = await getAuthHeaders(options.headers);
     
     // Set a timeout to detect unavailable API
@@ -75,6 +125,22 @@ export const apiRequest = async <T>(
     
     clearTimeout(timeoutId);
     
+    // Handle 401 errors separately with retry logic
+    if (response.status === 401 && retryCount < 1) {
+      // Force token refresh
+      try {
+        const { supabase } = await import('../config/supabase');
+        const { error } = await supabase.auth.refreshSession();
+        
+        if (!error) {
+          // Retry the request with a fresh token
+          return await apiRequest(endpoint, options, retryCount + 1);
+        }
+      } catch (refreshError) {
+        // Ignore refresh errors
+      }
+    }
+    
     await handleApiError(response);
     
     // Return null for 204 No Content responses
@@ -84,8 +150,6 @@ export const apiRequest = async <T>(
     
     return await response.json();
   } catch (error: any) {
-    console.error('API request failed:', error);
-    
     // Handle network errors and timeouts
     if (
       error.name === 'AbortError' || 
@@ -112,7 +176,7 @@ export const uploadFile = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   try {
-    const url = `${API_URL}${endpoint}`;
+    const url = buildApiUrl(endpoint);
     const token = await getAuthToken();
     
     // For file uploads, don't set Content-Type - let the browser set it with boundary
@@ -138,8 +202,6 @@ export const uploadFile = async <T>(
     await handleApiError(response);
     return await response.json();
   } catch (error: any) {
-    console.error('File upload failed:', error);
-    
     // Handle network errors and timeouts
     if (
       error.name === 'AbortError' || 

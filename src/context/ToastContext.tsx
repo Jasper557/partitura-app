@@ -19,7 +19,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [toasts, setToasts] = useState<Toast[]>([])
   
   const showToast = (message: string, type: ToastType = 'info') => {
-    const id = Date.now().toString()
+    // Create a more unique ID using timestamp + random string
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     setToasts((prev) => [...prev, { id, message, type }])
     
     // Auto dismiss after 5 seconds

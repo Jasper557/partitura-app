@@ -20,11 +20,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'implicit',
-    storage: window.localStorage,
+    detectSessionInUrl: false, // We're handling the URL manually in our app
+    storage: localStorage,
     storageKey: 'partitura-auth',
-    debug: true
+    flowType: 'pkce', // Use PKCE flow for better security
+    debug: isDev // Enable debug mode in development for troubleshooting
   }
 })
 

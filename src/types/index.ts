@@ -53,4 +53,6 @@ export interface PracticeEvent {
   isCompleted: boolean
   sheetMusicId?: string
   color?: string
-} 
+}
+
+// For Tauri v2, no global __TAURI__ is needed anymore, we use the API directly 

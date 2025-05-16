@@ -27,7 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       overflow-hidden
       border
       will-change-[width,transform]
-      ${isExpanded ? 'w-64' : 'w-20'}
+      ${isExpanded ? 'w-60' : 'w-20'}
     `}>
       <div className={`
         flex items-center p-4 cursor-pointer
