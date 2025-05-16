@@ -10,6 +10,7 @@ import MainLayout from './layouts/MainLayout'
 import { Page } from './types/index'
 import { useAuth } from './context/AuthContext'
 import Login from './components/Login'
+import LoadingScreen from './components/LoadingScreen'
 
 // Lazy load components
 const SheetMusic = lazy(() => import('./pages/SheetMusic'))
@@ -22,13 +23,6 @@ const KeyboardShortcuts = lazy(() => import('./pages/KeyboardShortcuts'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const PrivacySettings = lazy(() => import('./pages/PrivacySettings'))
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
-
-// Loading fallback
-const LoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-  </div>
-)
 
 // Auth callback handler component
 const AuthCallback = () => {
@@ -45,7 +39,7 @@ const AuthCallback = () => {
     }, 1000);
   }, []);
   
-  return <LoadingFallback />;
+  return <LoadingScreen message="Finalizing authentication" />;
 };
 
 const ProtectedContent: React.FC = () => {
@@ -55,7 +49,7 @@ const ProtectedContent: React.FC = () => {
   const location = useLocation()
 
   if (loading) {
-    return <LoadingFallback />
+    return <LoadingScreen message="Connecting to your account" />
   }
 
   if (!user) {
@@ -95,7 +89,7 @@ const ProtectedContent: React.FC = () => {
       onSidebarExpandedChange={setIsSidebarExpanded}
     >
       <AnimatePresence mode="wait">
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<LoadingScreen message="Loading content" />}>
           {renderPage()}
         </Suspense>
       </AnimatePresence>

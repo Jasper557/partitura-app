@@ -1,10 +1,26 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import LoadingScreen from './LoadingScreen'
 
 const Login: React.FC = () => {
   const { signInWithGoogle } = useAuth()
   const { isDarkMode } = useTheme()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSignIn = async () => {
+    setIsLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      console.error('Login error:', error)
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return <LoadingScreen message="Connecting to your account" />
+  }
 
   return (
     <div className={`
@@ -36,7 +52,7 @@ const Login: React.FC = () => {
 
         <div className="mt-8">
           <button
-            onClick={signInWithGoogle}
+            onClick={handleSignIn}
             className={`
               group relative w-full flex justify-center
               py-3 px-4 rounded-lg text-sm font-medium
