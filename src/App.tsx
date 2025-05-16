@@ -5,11 +5,13 @@ import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { ApiStatusProvider } from './context/ApiStatusContext'
 import { ShortcutProvider } from './context/ShortcutContext'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import MainLayout from './layouts/MainLayout'
 import { Page } from './types/index'
 import { useAuth } from './context/AuthContext'
+import { useTheme } from './context/ThemeContext'
 import Login from './components/Login'
+import { API_URL } from './config/api'
 
 // Lazy load components
 const SheetMusic = lazy(() => import('./pages/SheetMusic'))
@@ -23,12 +25,84 @@ const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const PrivacySettings = lazy(() => import('./pages/PrivacySettings'))
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
 
-// Loading fallback
-const LoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-  </div>
-)
+// Creative loading component using brand colors
+const CreativeLoader = () => {
+  const { isDarkMode } = useTheme();
+  
+  const bgColor = isDarkMode ? 'bg-gray-900' : 'bg-gray-50';
+  const dotBaseClasses = "w-4 h-4 rounded-full";
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className={`min-h-screen flex flex-col items-center justify-center ${bgColor}`}
+    >
+      <div className="relative h-24 w-24">
+        {/* Outer rotating circle with brand colors */}
+        <motion.div 
+          className="absolute top-0 left-0 w-full h-full"
+          animate={{ rotate: 360 }}
+          transition={{ 
+            duration: 2, 
+            repeat: Infinity, 
+            ease: "linear" 
+          }}
+        >
+          <motion.div className={`${dotBaseClasses} absolute top-0 left-1/2 -translate-x-1/2 bg-green-400 shadow-lg shadow-green-400/30`} />
+          <motion.div className={`${dotBaseClasses} absolute top-1/2 right-0 -translate-y-1/2 bg-blue-400 shadow-lg shadow-blue-400/30`} />
+          <motion.div className={`${dotBaseClasses} absolute bottom-0 left-1/2 -translate-x-1/2 bg-orange-400 shadow-lg shadow-orange-400/30`} />
+          <motion.div className={`${dotBaseClasses} absolute top-1/2 left-0 -translate-y-1/2 bg-blue-300 shadow-lg shadow-blue-300/30`} />
+        </motion.div>
+        
+        {/* Inner rotating ring (opposite direction) */}
+        <motion.div 
+          className="absolute top-0 left-0 w-full h-full"
+          initial={{ rotate: 0 }}
+          animate={{ rotate: -360 }}
+          transition={{ 
+            duration: 3, 
+            repeat: Infinity, 
+            ease: "linear" 
+          }}
+          style={{ scale: 0.65 }}
+        >
+          <motion.div 
+            className={`${dotBaseClasses} absolute top-0 left-1/2 -translate-x-1/2 bg-blue-300 shadow-lg shadow-blue-300/20 w-3 h-3`}
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          <motion.div 
+            className={`${dotBaseClasses} absolute top-1/2 right-0 -translate-y-1/2 bg-green-300 shadow-lg shadow-green-300/20 w-3 h-3`}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+          />
+          <motion.div 
+            className={`${dotBaseClasses} absolute bottom-0 left-1/2 -translate-x-1/2 bg-orange-300 shadow-lg shadow-orange-300/20 w-3 h-3`}
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+          />
+          <motion.div 
+            className={`${dotBaseClasses} absolute top-1/2 left-0 -translate-y-1/2 bg-blue-200 shadow-lg shadow-blue-200/20 w-3 h-3`}
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.9 }}
+          />
+        </motion.div>
+      </div>
+      
+      <motion.p 
+        className={`mt-8 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+      >
+        Loading your music...
+      </motion.p>
+    </motion.div>
+  );
+};
 
 // Auth callback handler component
 const AuthCallback = () => {
@@ -45,7 +119,7 @@ const AuthCallback = () => {
     }, 1000);
   }, []);
   
-  return <LoadingFallback />;
+  return <CreativeLoader />;
 };
 
 const ProtectedContent: React.FC = () => {
@@ -55,7 +129,7 @@ const ProtectedContent: React.FC = () => {
   const location = useLocation()
 
   if (loading) {
-    return <LoadingFallback />
+    return <CreativeLoader />
   }
 
   if (!user) {
@@ -95,7 +169,7 @@ const ProtectedContent: React.FC = () => {
       onSidebarExpandedChange={setIsSidebarExpanded}
     >
       <AnimatePresence mode="wait">
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<CreativeLoader />}>
           {renderPage()}
         </Suspense>
       </AnimatePresence>
@@ -104,6 +178,10 @@ const ProtectedContent: React.FC = () => {
 }
 
 const App: React.FC = () => {
+  // Log the API URL to verify our environment detection works
+  console.log('APP ENVIRONMENT:', import.meta.env.PROD ? 'Production' : 'Development');
+  console.log('API URL being used:', API_URL);
+
   return (
     <AuthProvider>
       <ThemeProvider>

@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "partitura",
+  "productName": "Partitura",
   "version": "0.1.0",
   "identifier": "de.jaspy.partitura",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "partitura",
+        "title": "Partitura",
         "width": 800,
         "height": 600,
         "resizable": true,

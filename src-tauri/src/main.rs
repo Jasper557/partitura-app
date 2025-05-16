@@ -299,7 +299,7 @@ fn create_success_response() -> Response<std::io::Cursor<Vec<u8>>> {
                 padding: 2rem;
                 transition: all 0.3s ease;
                 position: relative;
-                overflow-x: hidden;
+                overflow: hidden;
             }
             
             .bg-shape {

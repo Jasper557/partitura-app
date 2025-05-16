@@ -3,12 +3,15 @@ import { User } from '@supabase/supabase-js'
 import { supabase } from '../config/supabase'
 import axios from 'axios'
 import { invoke } from '@tauri-apps/api/core'
-import { buildApiUrl } from '../config/api'
+import { buildApiUrl, apiRequest } from '../config/api'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
   logout: () => Promise<void>
   refreshSession: () => Promise<boolean>
 }
@@ -22,7 +25,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+  const apiUrl = import.meta.env.PROD 
+    ? 'https://partitura-api.onrender.com' 
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3001')
 
   useEffect(() => {
     const initAuth = async () => {
@@ -176,6 +181,168 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const signInWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Signing in with email:', email)
+      
+      try {
+        // Call our API endpoint for email sign-in
+        const response = await fetch(buildApiUrl('/auth/email/signin'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        })
+        
+        const data = await response.json()
+        console.log('Sign in response:', data)
+        
+        // Handle successful login
+        if (response.ok && data && data.session) {
+          const sessionData = data.session
+          
+          // Store session in localStorage
+          const storageKey = 'partitura-auth'
+          const sessionObject = {
+            access_token: sessionData.access_token,
+            refresh_token: sessionData.refresh_token || '',
+            user: sessionData.user,
+            expires_at: sessionData.expires_at || (Date.now() + 3600 * 1000),
+            expires_in: sessionData.expires_in || 3600
+          }
+          
+          localStorage.setItem(storageKey, JSON.stringify(sessionObject))
+          
+          // Set the user state
+          setUser(sessionData.user)
+          return { error: null }
+        }
+        
+        return { error: data.error || 'Could not sign in with the provided credentials' }
+      } catch (error: any) {
+        console.error('Email sign in error:', error)
+        return { error: 'Authentication failed. Please try again.' }
+      }
+    } catch (error: any) {
+      console.error('Email sign in error:', error)
+      const errorMessage = error.message || 'Authentication failed. Please try again.'
+      setError(errorMessage)
+      return { error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Signing up with email:', email)
+      
+      try {
+        // Call our API endpoint for email sign-up
+        const response = await fetch(buildApiUrl('/auth/email/signup'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        })
+        
+        const data = await response.json()
+        console.log('Sign up response:', data)
+        
+        // If signup is successful but requires email confirmation
+        if (response.ok && data && data.requiresEmailConfirmation) {
+          return { error: null }
+        }
+        
+        // Handle successful signup with immediate login
+        if (response.ok && data && data.session) {
+          const sessionData = data.session
+          
+          // Store session in localStorage
+          const storageKey = 'partitura-auth'
+          const sessionObject = {
+            access_token: sessionData.access_token,
+            refresh_token: sessionData.refresh_token || '',
+            user: sessionData.user,
+            expires_at: sessionData.expires_at || (Date.now() + 3600 * 1000),
+            expires_in: sessionData.expires_in || 3600
+          }
+          
+          localStorage.setItem(storageKey, JSON.stringify(sessionObject))
+          
+          // Set the user state
+          setUser(sessionData.user)
+          return { error: null }
+        }
+        
+        return { error: data.error || 'Could not sign up with the provided credentials' }
+      } catch (error: any) {
+        console.error('Email sign up error:', error)
+        return { error: 'Registration failed. Please try again.' }
+      }
+    } catch (error: any) {
+      console.error('Email sign up error:', error)
+      const errorMessage = error.message || 'Signup failed. Please try again.'
+      setError(errorMessage)
+      return { error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Requesting password reset for:', email)
+      
+      try {
+        // Call our API endpoint for password reset
+        const response = await fetch(buildApiUrl('/auth/email/reset-password'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email })
+        })
+        
+        const data = await response.json()
+        console.log('Password reset response:', data)
+        
+        if (response.ok) {
+          return { error: null }
+        }
+        
+        return { error: data.error || 'Password reset failed. Please try again.' }
+      } catch (error: any) {
+        console.error('Password reset error:', error)
+        return { error: 'Password reset failed. Please try again.' }
+      }
+    } catch (error: any) {
+      console.error('Password reset error:', error)
+      const errorMessage = error.message || 'Password reset failed. Please try again.'
+      setError(errorMessage)
+      return { error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const logout = async () => {
     try {
       // Force user state update first
@@ -199,7 +366,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout, refreshSession }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signInWithGoogle, 
+      signInWithEmail,
+      signUpWithEmail,
+      resetPassword,
+      logout, 
+      refreshSession 
+    }}>
       {children}
     </AuthContext.Provider>
   )

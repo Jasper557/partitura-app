@@ -3,10 +3,12 @@ import { getAuthToken } from '../services/userService';
 
 /**
  * Base API URL from environment variables
- * Defaults to localhost:3001/api in development
- * Note: VITE_API_URL should NOT include the /api suffix
+ * Uses localhost in development mode
+ * Uses production URL in production build
  */
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export const API_URL = import.meta.env.PROD 
+  ? 'https://partitura-api.onrender.com' 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 /**
  * Helper function to build a complete API URL, ensuring no duplicate /api segments
