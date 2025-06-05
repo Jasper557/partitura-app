@@ -1,5 +1,5 @@
 import { SheetMusicItem } from '../types/index'
-import { apiRequest, uploadFile, ApiError } from '../config/api'
+import { api, uploadFile, ApiError } from '../config/api'
 
 /**
  * Saves a new sheet music item with PDF file to the server
@@ -30,7 +30,8 @@ export const saveSheetMusic = async (userId: string, item: SheetMusicItem, pdfFi
  */
 export const getUserSheetMusic = async (userId: string): Promise<SheetMusicItem[]> => {
   try {
-    const data = await apiRequest<SheetMusicItem[]>(`/sheet-music/${userId}`)
+    const response = await api.get<SheetMusicItem[]>(`/sheet-music/${userId}`)
+    const data = response.data
     
     if (!data || data.length === 0) {
       return []
@@ -58,13 +59,10 @@ export const updateSheetMusic = async (
   updates: Partial<SheetMusicItem>
 ) => {
   try {
-    await apiRequest(`/sheet-music/${userId}/${itemId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        title: updates.title,
-        composer: updates.composer,
-        isFavorite: updates.isFavorite
-      })
+    await api.put(`/sheet-music/${userId}/${itemId}`, {
+      title: updates.title,
+      composer: updates.composer,
+      isFavorite: updates.isFavorite
     })
   } catch (error) {
     console.error('Error updating sheet music:', error)
@@ -80,9 +78,7 @@ export const updateSheetMusic = async (
  */
 export const deleteSheetMusic = async (userId: string, itemId: string) => {
   try {
-    await apiRequest(`/sheet-music/${userId}/${itemId}`, {
-      method: 'DELETE'
-    })
+    await api.delete(`/sheet-music/${userId}/${itemId}`)
   } catch (error) {
     console.error('Error deleting sheet music:', error)
     if (error instanceof ApiError && error.isConnectionError) {

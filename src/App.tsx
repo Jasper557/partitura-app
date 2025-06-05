@@ -11,6 +11,7 @@ import { Page } from './types/index'
 import { useAuth } from './context/AuthContext'
 import Login from './components/Login'
 import LoadingScreen from './components/LoadingScreen'
+import AuthStatusMonitor from './components/AuthStatusMonitor'
 
 // Lazy load components
 const SheetMusic = lazy(() => import('./pages/SheetMusic'))
@@ -104,6 +105,7 @@ const App: React.FC = () => {
         <ShortcutProvider>
           <ToastProvider>
             <ApiStatusProvider>
+              <AuthStatusMonitor />
               <Routes>
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={<ProtectedContent />} />

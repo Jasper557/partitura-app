@@ -170,10 +170,6 @@
   transition: transform 0.2s ease-in-out;
 }
 
-.react-pdf__Page:hover {
-  transform: scale(1.01);
-}
-
 .react-pdf__Page canvas {
   border-radius: 0.375rem;
   max-width: 100%;

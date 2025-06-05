@@ -39,13 +39,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <main 
         ref={mainRef}
         className={`
-        transition-all duration-300
-        ${isSidebarExpanded ? 'ml-72' : 'ml-28'}
-          h-screen overflow-y-auto
-        p-8
+          transition-all duration-300 ease-in-out
+          ${isSidebarExpanded ? 'ml-60' : 'ml-20'}
+          h-screen
+          p-8
+          overflow-x-hidden overflow-y-auto
+          relative
+          w-[calc(100%-5rem)]
         `}
+        style={{
+          width: isSidebarExpanded ? 'calc(100% - 15rem)' : 'calc(100% - 5rem)'
+        }}
       >
-        {children}
+        <div className="max-w-[2000px] mx-auto">
+          {children}
+        </div>
       </main>
     </div>
   )

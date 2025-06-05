@@ -36,6 +36,9 @@ const Calendar: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([])
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  // Notification preference states
+  const [systemNotifications, setSystemNotifications] = useState(true)
+  const [practiceReminders, setPracticeReminders] = useState(true)
 
   // Event type options
   const eventTypeOptions: { type: EventType; label: string }[] = [
@@ -257,6 +260,47 @@ const Calendar: React.FC = () => {
     return sheetMusicItems.find(item => item.id === selectedEvent.sheetMusicId)
   }
   
+  // Notification logic: send system notification when a practice session starts
+  useEffect(() => {
+    if (!user || !events.length || !systemNotifications || !practiceReminders) return
+
+    let lastNotifiedSessionId: string | null = null
+
+    const checkForPracticeSession = async () => {
+      const now = new Date()
+      // Find a session that starts within the last 2 minutes (to avoid missing it if the app was closed)
+      const currentSession = events.find(event =>
+        event.type === 'practice' &&
+        new Date(event.startTime) <= now &&
+        new Date(event.startTime).getTime() + 2 * 60 * 1000 > now.getTime() &&
+        !event.isCompleted &&
+        event.id !== lastNotifiedSessionId
+      )
+      if (currentSession) {
+        // Dynamically import Tauri notification API (works only in Tauri context)
+        try {
+          const { sendNotification, isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification')
+          let granted = await isPermissionGranted()
+          if (!granted) {
+            const permission = await requestPermission()
+            granted = permission === 'granted'
+          }
+          if (granted) {
+            sendNotification({
+              title: '  Practice Session startet jetzt!',
+              body: `  "${currentSession.title}" (${new Date(currentSession.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}) läuft jetzt. Viel Spaß beim Üben!`
+            })
+            lastNotifiedSessionId = currentSession.id
+          }
+        } catch (err) {
+          // Ignore if not in Tauri context
+        }
+      }
+    }
+    const interval = setInterval(checkForPracticeSession, 60 * 1000)
+    return () => clearInterval(interval)
+  }, [user, events, systemNotifications, practiceReminders])
+
   return (
     <PageTransition>
       <div className={`

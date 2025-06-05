@@ -1,28 +1,35 @@
 // API configuration and helper functions
-import { getAuthToken } from '../services/userService';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { createAuthInterceptor, handleAuthError } from '../services/authService';
 
-/**
- * Base API URL from environment variables
- * Defaults to localhost:3001/api in development
- * Note: VITE_API_URL should NOT include the /api suffix
- */
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-/**
- * Helper function to build a complete API URL, ensuring no duplicate /api segments
- */
-export const buildApiUrl = (endpoint: string): string => {
-  // Ensure endpoint starts with /
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
-  // Check if endpoint already starts with /api
-  if (normalizedEndpoint.startsWith('/api/')) {
-    return `${API_URL}${normalizedEndpoint}`;
+// Add type declaration for Tauri
+declare global {
+  interface Window {
+    __TAURI__?: any;
   }
-  
-  // Otherwise, add the /api prefix
-  return `${API_URL}/api${normalizedEndpoint}`;
 }
+
+/**
+ * Determine if we're running in Tauri
+ */
+const isTauri = !!window.__TAURI__;
+
+/**
+ * Base API URL for backward compatibility
+ */
+export const API_URL = isTauri 
+  ? 'http://localhost:3001' 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
+
+/**
+ * Build API URL with proper base URL handling
+ */
+export const buildApiUrl = (path: string): string => {
+  // Ensure path starts with /
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  return `${API_URL}/api${normalizedPath}`;
+};
 
 /**
  * Error class for API-specific errors
@@ -30,191 +37,187 @@ export const buildApiUrl = (endpoint: string): string => {
 export class ApiError extends Error {
   status: number;
   isConnectionError: boolean;
+  response?: any;
 
-  constructor(message: string, status: number = 0, isConnectionError: boolean = false) {
+  constructor(message: string, status: number = 0, isConnectionError: boolean = false, response?: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.isConnectionError = isConnectionError;
+    this.response = response;
   }
 }
 
 /**
- * Helper function to handle API response errors
+ * Create configured axios instance with auth interceptors
  */
-export const handleApiError = async (response: Response) => {
-  if (!response.ok) {
-    let errorData: any = null;
-    
-    try {
-      errorData = await response.json();
-    } catch (parseError) {
-      // If the response isn't valid JSON, create a basic error object
-      errorData = { error: `API Error: ${response.status} ${response.statusText}` };
-    }
-    
-    const errorMessage = 
-      errorData?.error || 
-      errorData?.message || 
-      `API Error: ${response.status} ${response.statusText}`;
-    
-    // Handle authentication errors specially
-    if (response.status === 401 || response.status === 403) {
-      // Token expired, attempt to refresh the session through Supabase
-      try {
-        const { supabase } = await import('../config/supabase');
-        const { data, error } = await supabase.auth.refreshSession();
-        
-        // If the refresh was successful, return so the original request can be retried
-        if (data?.session && !error) {
-          console.log('Successfully refreshed auth token');
-          // Don't throw the error if refresh succeeded, allowing the request to be retried
-          return 'retry';
-        } else {
-          console.error('Failed to refresh token:', error);
-          // If token can't be refreshed, user will need to re-authenticate
-          window.location.href = '/login';
-        }
-      } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
-        // Force redirect to login on critical auth errors
-        window.location.href = '/login';
+const createApiClient = (): AxiosInstance => {
+  const client = axios.create({
+    timeout: 15000, // 15 seconds
+    // Don't set default Content-Type - let each request decide
+    withCredentials: true,
+  });
+
+  // Add auth interceptor for automatic token management
+  createAuthInterceptor(client);
+
+  // Add response interceptor for enhanced error handling
+  client.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      // Handle network errors
+      if (!error.response) {
+        throw new ApiError(
+          'Unable to connect to the Partitura API. Please check your connection.',
+          0,
+          true
+        );
       }
+
+      const { status, statusText, data } = error.response;
+      
+      // Extract error message
+      const errorMessage = data?.error || data?.message || `API Error: ${status} ${statusText}`;
+      
+      // Handle authentication errors
+      if (status === 401 || status === 403) {
+        const handled = await handleAuthError(status);
+        if (!handled) {
+          // If auth error couldn't be handled, redirect to login
+          console.warn('Authentication failed, redirecting to login');
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        }
+      }
+
+      // Throw enhanced error
+      throw new ApiError(errorMessage, status, false, error.response);
     }
-    
-    throw new ApiError(errorMessage, response.status);
-  }
-  
-  return response;
+  );
+
+  return client;
 };
 
 /**
- * Helper function to get authorization headers with token
+ * Main API client instance
  */
-export const getAuthHeaders = async (customHeaders: HeadersInit = {}) => {
-  const token = await getAuthToken();
-  
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    ...customHeaders,
-  };
-};
+export const apiClient = createApiClient();
 
 /**
- * Helper function to make API requests with consistent error handling
+ * Convenience methods for different HTTP verbs with full URL construction
  */
-export const apiRequest = async <T>(
-  endpoint: string, 
-  options: RequestInit = {},
-  retryCount: number = 0
-): Promise<T> => {
-  try {
-    const url = buildApiUrl(endpoint);
-    const headers = await getAuthHeaders(options.headers);
-    
-    // Set a timeout to detect unavailable API
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Handle 401 errors separately with retry logic
-    if (response.status === 401 && retryCount < 1) {
-      // Force token refresh
-      try {
-        const { supabase } = await import('../config/supabase');
-        const { error } = await supabase.auth.refreshSession();
-        
-        if (!error) {
-          // Retry the request with a fresh token
-          return await apiRequest(endpoint, options, retryCount + 1);
-        }
-      } catch (refreshError) {
-        // Ignore refresh errors
+export const api = {
+  get: <T = any>(path: string, config?: AxiosRequestConfig) => 
+    apiClient.get<T>(buildApiUrl(path), config),
+  
+  post: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
+    // Set Content-Type for JSON requests, unless already specified
+    const jsonConfig = {
+      ...config,
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
       }
-    }
-    
-    await handleApiError(response);
-    
-    // Return null for 204 No Content responses
-    if (response.status === 204) {
-      return null as T;
-    }
-    
-    return await response.json();
-  } catch (error: any) {
-    // Handle network errors and timeouts
-    if (
-      error.name === 'AbortError' || 
-      error.name === 'TypeError' || 
-      error.message === 'Failed to fetch'
-    ) {
-      throw new ApiError(
-        'Unable to connect to the Partitura API.',
-        0,
-        true
-      );
-    }
-    
-    throw error;
-  }
+    };
+    return apiClient.post<T>(buildApiUrl(path), data, jsonConfig);
+  },
+  
+  put: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
+    // Set Content-Type for JSON requests, unless already specified  
+    const jsonConfig = {
+      ...config,
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      }
+    };
+    return apiClient.put<T>(buildApiUrl(path), data, jsonConfig);
+  },
+  
+  patch: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
+    // Set Content-Type for JSON requests, unless already specified
+    const jsonConfig = {
+      ...config,
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      }
+    };
+    return apiClient.patch<T>(buildApiUrl(path), data, jsonConfig);
+  },
+  
+  delete: <T = any>(path: string, config?: AxiosRequestConfig) => 
+    apiClient.delete<T>(buildApiUrl(path), config),
 };
 
 /**
  * Helper function for file uploads
  */
-export const uploadFile = async <T>(
-  endpoint: string,
+export const uploadFile = async <T = any>(
+  path: string,
   formData: FormData,
-  options: RequestInit = {}
+  config?: AxiosRequestConfig
 ): Promise<T> => {
+  const uploadConfig = {
+    ...config,
+    headers: {
+      // Remove Content-Type to let axios set multipart/form-data boundary automatically
+      ...config?.headers,
+    },
+    timeout: 30000, // 30 seconds for file uploads
+  };
+
+  // Explicitly remove Content-Type if it exists to ensure multipart boundary is set correctly
+  if (uploadConfig.headers && 'Content-Type' in uploadConfig.headers) {
+    delete uploadConfig.headers['Content-Type'];
+  }
+
+  console.log('Uploading file to:', buildApiUrl(path));
+  console.log('FormData entries:');
+  for (const [key, value] of formData.entries()) {
+    console.log(`  ${key}:`, value instanceof File ? `File(${value.name}, ${value.size} bytes)` : value);
+  }
+
+  const response = await apiClient.post<T>(buildApiUrl(path), formData, uploadConfig);
+  return response.data;
+};
+
+/**
+ * Helper function to check API health
+ * Falls back to a simple connection test if /health endpoint doesn't exist
+ */
+export const checkApiHealth = async (): Promise<boolean> => {
   try {
-    const url = buildApiUrl(endpoint);
-    const token = await getAuthToken();
-    
-    // For file uploads, don't set Content-Type - let the browser set it with boundary
-    const headers = {
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    };
-    
-    // Set a timeout to detect unavailable API
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-      ...options,
-      headers,
-      signal: controller.signal,
+    // Health endpoint is at /health, not /api/health
+    const healthUrl = `${API_URL}/health`;
+    const response = await apiClient.get(healthUrl, { 
+      timeout: 5000,
+      validateStatus: (status) => status < 500 // Accept any status under 500 as "healthy"
     });
-    
-    clearTimeout(timeoutId);
-    
-    await handleApiError(response);
-    return await response.json();
+    return true;
   } catch (error: any) {
-    // Handle network errors and timeouts
-    if (
-      error.name === 'AbortError' || 
-      error.name === 'TypeError' || 
-      error.message === 'Failed to fetch'
-    ) {
-      throw new ApiError(
-        'Unable to connect to the Partitura API.',
-        0,
-        true
-      );
+    // If it's a 404, the health endpoint doesn't exist - that's ok, API might still be working
+    if (error.status === 404) {
+      try {
+        // Try a simple request to test basic connectivity
+        // This will test if the server is running and auth interceptors work
+        const response = await apiClient.get(buildApiUrl('/'), { 
+          timeout: 5000,
+          validateStatus: (status) => status < 500 // Accept any status under 500 as "healthy"
+        });
+        return true;
+      } catch (connectError) {
+        // If this also fails, the API is likely down
+        return false;
+      }
     }
     
-    throw error;
+    // For other errors (network, 500, etc.), consider API unhealthy
+    console.warn('API health check failed:', error.message || error);
+    return false;
   }
-}; 
+};
+
+// Export the main client as default
+export default apiClient; 

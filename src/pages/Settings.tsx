@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import useScrollReset from '../hooks/useScrollReset'
@@ -11,10 +11,84 @@ import {
   Bell, 
   Shield, 
   HelpCircle,
-  Keyboard
+  Keyboard,
+  ArrowLeft
 } from 'lucide-react'
 import { Page } from '../types/index'
 import PageTransition from '../components/PageTransition'
+
+// Avatar cache to prevent rate limiting
+const avatarCache = new Map<string, string>();
+const failedAvatars = new Set<string>();
+
+// Helper component for cached avatar loading
+const CachedAvatar: React.FC<{
+  src: string;
+  alt: string;
+  className: string;
+  isDarkMode: boolean;
+  fallbackText: string;
+}> = ({ src, alt, className, isDarkMode, fallbackText }) => {
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // Check if this avatar has already failed
+    if (failedAvatars.has(src)) {
+      setError(true);
+      return;
+    }
+
+    // Check cache first
+    if (avatarCache.has(src)) {
+      setAvatarSrc(avatarCache.get(src)!);
+      return;
+    }
+
+    // Load image with rate limiting protection
+    const img = new Image();
+    img.onload = () => {
+      avatarCache.set(src, src);
+      setAvatarSrc(src);
+    };
+    img.onerror = () => {
+      console.log('Avatar failed to load (likely rate limited):', src);
+      failedAvatars.add(src);
+      setError(true);
+    };
+    
+    // Add a small delay to prevent rapid-fire requests
+    setTimeout(() => {
+      img.src = src;
+    }, Math.random() * 1000); // Random delay up to 1 second
+  }, [src]);
+
+  if (error || !avatarSrc) {
+    return (
+      <div className={`
+        ${className} rounded-full flex items-center justify-center
+        ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}
+      `}>
+        <span className={`text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          {fallbackText}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={avatarSrc}
+      alt={alt}
+      className={`${className} rounded-full object-cover bg-gray-200`}
+      onError={() => {
+        console.log('Avatar load error after cache:', avatarSrc);
+        failedAvatars.add(src);
+        setError(true);
+      }}
+    />
+  );
+};
 
 const SettingSection: React.FC<{
   title: string
@@ -83,6 +157,20 @@ const Settings: React.FC<{
   // Reset scroll position when component mounts
   useScrollReset()
 
+  // Debug logging for user data
+  useEffect(() => {
+    if (import.meta.env.DEV && user) {
+      console.log('Settings: User data:', {
+        email: user.email,
+        user_metadata: user.user_metadata,
+        avatar_url: user.user_metadata?.avatar_url,
+        full_name: user.user_metadata?.full_name,
+        picture: user.user_metadata?.picture, // Google usually provides this
+        name: user.user_metadata?.name,
+      })
+    }
+  }, [user])
+
   return (
     <PageTransition>
       <div className={`
@@ -101,29 +189,26 @@ const Settings: React.FC<{
                 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}
               `}>
                 <div className="flex items-center gap-4">
-                  {user?.user_metadata?.avatar_url ? (
-                    <img
-                      src={user.user_metadata.avatar_url}
+                  {(user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
+                    <CachedAvatar
+                      src={user.user_metadata.avatar_url || user.user_metadata.picture}
                       alt="Profile"
-                      className="w-12 h-12 rounded-full object-cover bg-gray-200"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/assets/default-avatar.png';
-                      }}
+                      className="w-12 h-12"
+                      isDarkMode={isDarkMode}
+                      fallbackText={user?.email?.[0]?.toUpperCase() || 'U'}
                     />
                   ) : (
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center
-                      ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}
-                    `}>
-                      <span className={`text-xl font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {user?.email?.[0]?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
+                    <CachedAvatar
+                      src=""
+                      alt="Profile"
+                      className="w-12 h-12"
+                      isDarkMode={isDarkMode}
+                      fallbackText={user?.email?.[0]?.toUpperCase() || 'U'}
+                    />
                   )}
                   <div>
                     <div className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                      {user?.user_metadata?.full_name || 'User'}
+                      {user?.user_metadata?.full_name || user?.user_metadata?.name || 'User'}
                     </div>
                     <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       {user?.email}

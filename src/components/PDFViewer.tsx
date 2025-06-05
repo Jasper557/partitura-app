@@ -235,48 +235,65 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ pdfPath, isOpen, onClose, title, 
     });
   }, []);
   
-  // Handle mouse wheel zoom
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (!useMouseWheelZoom) return;
-    
-    const isCtrlPressed = e.ctrlKey || e.metaKey;
-    
-    if (isCtrlPressed) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      if (e.deltaY < 0) {
-        setScale(prev => {
-          const newScale = prev + 0.05;
-          return newScale > 3.0 ? 3.0 : newScale;
-        });
-      } else {
-        setScale(prev => {
-          const newScale = prev - 0.05;
-          return newScale < 0.5 ? 0.5 : newScale;
-        });
-      }
-    }
-  }, [useMouseWheelZoom]);
-
-  // ======= EVENT LISTENERS =======
-  
   // Mouse wheel event listener
   useEffect(() => {
     if (!isOpen) return;
     
-    const captureWheel = (e: WheelEvent) => {
-      if (useMouseWheelZoom && (e.ctrlKey || e.metaKey)) {
-        handleWheel(e);
+    const handleZoom = (e: Event) => {
+      if (!(e instanceof WheelEvent) || !useMouseWheelZoom) return;
+      
+      if (e.ctrlKey || e.metaKey) {
+        // Stop event propagation immediately
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Calculate zoom delta based on wheel direction
+        const delta = e.deltaY < 0 ? 0.05 : -0.05;
+        
+        setScale(prev => {
+          const newScale = prev + delta;
+          return Math.min(Math.max(newScale, 0.5), 3.0);
+        });
       }
     };
-    
-    window.addEventListener('wheel', captureWheel, { passive: false, capture: true });
-    
-    return () => {
-      window.removeEventListener('wheel', captureWheel, { capture: true });
+
+    // Function to recursively add wheel event listeners to all canvas elements
+    const addWheelListenersToCanvas = () => {
+      const canvasElements = document.querySelectorAll('.react-pdf__Page canvas');
+      canvasElements.forEach(canvas => {
+        canvas.addEventListener('wheel', handleZoom, { passive: false, capture: true });
+      });
     };
-  }, [isOpen, handleWheel, useMouseWheelZoom]);
+
+    // Initial addition of event listeners
+    addWheelListenersToCanvas();
+
+    // Create a MutationObserver to watch for new canvas elements
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length > 0) {
+          addWheelListenersToCanvas();
+        }
+      });
+    });
+
+    // Start observing the PDF viewer container for changes
+    if (pdfContentRef.current) {
+      observer.observe(pdfContentRef.current, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    return () => {
+      // Clean up event listeners
+      const canvasElements = document.querySelectorAll('.react-pdf__Page canvas');
+      canvasElements.forEach(canvas => {
+        canvas.removeEventListener('wheel', handleZoom, { capture: true });
+      });
+      observer.disconnect();
+    };
+  }, [isOpen, useMouseWheelZoom]);
 
   // Keyboard shortcuts
   useEffect(() => {

@@ -1,12 +1,13 @@
 import { PracticeEvent } from '../types/index';
-import { apiRequest } from '../config/api';
+import { api } from '../config/api';
 
 /**
  * Fetch all practice events for a user
  */
 export const fetchEvents = async (userId: string): Promise<PracticeEvent[]> => {
   try {
-    const data = await apiRequest<PracticeEvent[]>(`/calendar/${userId}`);
+    const response = await api.get<PracticeEvent[]>(`/calendar/${userId}`);
+    const data = response.data;
 
     return data.map(event => ({
       ...event,
@@ -27,19 +28,18 @@ export const addEvent = async (userId: string, event: Omit<PracticeEvent, 'id'>)
     // Ensure event type is set
     const eventType = event.type || 'practice';
     
-    const data = await apiRequest<PracticeEvent>(`/calendar/${userId}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        title: event.title,
-        description: event.description || '',
-        startTime: event.startTime.toISOString(),
-        endTime: event.endTime.toISOString(),
-        isCompleted: event.isCompleted || false,
-        sheetMusicId: event.sheetMusicId,
-        color: event.color || '#3B82F6',
-        type: eventType
-      })
+    const response = await api.post<PracticeEvent>(`/calendar/${userId}`, {
+      title: event.title,
+      description: event.description || '',
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime.toISOString(),
+      isCompleted: event.isCompleted || false,
+      sheetMusicId: event.sheetMusicId,
+      color: event.color || '#3B82F6',
+      type: eventType
     });
+
+    const data = response.data;
 
     return {
       ...data,
@@ -57,18 +57,15 @@ export const addEvent = async (userId: string, event: Omit<PracticeEvent, 'id'>)
  */
 export const updateEvent = async (userId: string, event: PracticeEvent): Promise<void> => {
   try {
-    await apiRequest(`/calendar/${userId}/${event.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        title: event.title,
-        description: event.description,
-        startTime: event.startTime.toISOString(),
-        endTime: event.endTime.toISOString(),
-        isCompleted: event.isCompleted,
-        sheetMusicId: event.sheetMusicId,
-        color: event.color,
-        type: event.type
-      })
+    await api.put(`/calendar/${userId}/${event.id}`, {
+      title: event.title,
+      description: event.description,
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime.toISOString(),
+      isCompleted: event.isCompleted,
+      sheetMusicId: event.sheetMusicId,
+      color: event.color,
+      type: event.type
     });
   } catch (error) {
     console.error('Error updating practice event:', error);
@@ -81,9 +78,7 @@ export const updateEvent = async (userId: string, event: PracticeEvent): Promise
  */
 export const deleteEvent = async (userId: string, eventId: string): Promise<void> => {
   try {
-    await apiRequest(`/calendar/${userId}/${eventId}`, {
-      method: 'DELETE'
-    });
+    await api.delete(`/calendar/${userId}/${eventId}`);
   } catch (error) {
     console.error('Error deleting practice event:', error);
     throw error;
@@ -95,10 +90,7 @@ export const deleteEvent = async (userId: string, eventId: string): Promise<void
  */
 export const toggleEventCompletion = async (userId: string, eventId: string, isCompleted: boolean): Promise<void> => {
   try {
-    await apiRequest(`/calendar/${userId}/${eventId}/toggle-completion`, {
-      method: 'PATCH',
-      body: JSON.stringify({ isCompleted })
-    });
+    await api.patch(`/calendar/${userId}/${eventId}/toggle-completion`, { isCompleted });
   } catch (error) {
     console.error('Error toggling practice event completion:', error);
     throw error;

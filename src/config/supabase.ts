@@ -25,6 +25,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: 'partitura-auth',
     flowType: 'pkce', // Use PKCE flow for better security
     debug: isDev // Enable debug mode in development for troubleshooting
+  },
+  // Configure realtime (WebSocket) settings
+  realtime: {
+    params: {
+      eventsPerSecond: 2
+    }
+  },
+  // Global request settings
+  global: {
+    headers: {
+      'x-client-info': 'partitura-app'
+    }
   }
 })
 

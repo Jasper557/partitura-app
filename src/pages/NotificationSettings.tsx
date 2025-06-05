@@ -8,6 +8,7 @@ import SettingRow from '../components/SettingRow'
 import InfoBox from '../components/InfoBox'
 import useScrollReset from '../hooks/useScrollReset'
 import PageTransition from '../components/PageTransition'
+import TestNotificationButton from '../components/TestNotificationButton'
 
 const NotificationSettings: React.FC<{
   onNavigate?: (page: Page) => void
@@ -98,6 +99,7 @@ const NotificationSettings: React.FC<{
               control={<ToggleSwitch isOn={inAppNotifications} onToggle={() => setInAppNotifications(!inAppNotifications)} />}
             />
             
+            {/* System Notifications */}
             <SettingRow
               icon={<Globe size={20} />}
               title="System Notifications"
@@ -125,6 +127,14 @@ const NotificationSettings: React.FC<{
               control={<ToggleSwitch isOn={calendarReminders} onToggle={() => setCalendarReminders(!calendarReminders)} />}
             />
           </div>
+          
+
+          {/* Test Notification Button */}
+          {systemNotifications && (
+            <div className="mt-4">
+              <TestNotificationButton />
+            </div>
+          )}
           
           {/* Save button */}
           <div className="mt-8">

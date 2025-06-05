@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { Plus, X, Music, Search } from 'lucide-react'
+import { Plus, X, Music, Search, Book, Share2, PlusCircle } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -18,34 +18,134 @@ import PageTransition from '../components/PageTransition'
 import withApiAvailability from '../hoc/withApiAvailability'
 
 /**
- * Component for the "Add New" card that appears at the beginning of the sheet music grid
+ * Individual icon button component for the control panel
  */
-const AddNewCard: React.FC<{ onClick: () => void; isDarkMode: boolean }> = ({ onClick, isDarkMode }) => (
-  <div
+const IconButton: React.FC<{
+  icon: React.ReactNode;
+  onClick: () => void;
+  isDarkMode: boolean;
+  isPrimary?: boolean;
+  className?: string;
+}> = ({ icon, onClick, isDarkMode, isPrimary = false, className = '' }) => (
+  <button
     onClick={onClick}
     className={`
-      rounded-xl shadow-lg overflow-hidden cursor-pointer
-      transition-all duration-200
-      hover:shadow-xl hover:scale-[1.02]
-      ${isDarkMode ? 'bg-gray-800/50' : 'bg-white/50'}
-      border-2 border-dashed
-      ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}
+      w-16 h-16 rounded-2xl
+      ${isDarkMode ? 'bg-gray-800/70' : 'bg-white/80'}
+      backdrop-blur-xl
+      shadow-lg hover:shadow-xl
+      transition-all duration-200 ease-out
+      hover:scale-105 active:scale-95
+      flex items-center justify-center
+      border
+      ${isDarkMode ? 'border-gray-700/50' : 'border-gray-200/50'}
+      ${isPrimary 
+        ? 'hover:border-blue-400/80 hover:bg-blue-500/20' 
+        : 'hover:border-gray-400/60 hover:bg-gray-50/20'
+      }
       group
-      h-[420px]
+      relative
+      overflow-hidden
+      ${className}
     `}
   >
-    <div className="h-full flex flex-col items-center justify-center p-4">
-      <div className={`
-        rounded-full p-4 mb-4
-        ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
-        group-hover:scale-110 transition-transform duration-200
-      `}>
-        <Plus size={32} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
-      </div>
-      <p className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-        Add New Sheet Music
-      </p>
+    {/* Icon container with simpler animations */}
+    <div className={`
+      relative z-10
+      transition-all duration-200 ease-out
+      ${isPrimary 
+        ? (isDarkMode ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-500 group-hover:text-blue-400')
+        : (isDarkMode ? 'text-gray-400 group-hover:text-gray-200' : 'text-gray-500 group-hover:text-gray-700')
+      }
+      group-hover:scale-110
+      drop-shadow-sm
+    `}>
+      {icon}
     </div>
+  </button>
+)
+
+/**
+ * Component for the control panel with icon buttons
+ */
+const ControlPanel: React.FC<{ 
+  onAddNew: () => void; 
+  isDarkMode: boolean;
+}> = ({ onAddNew, isDarkMode }) => (
+  <div
+    className={`
+      rounded-3xl shadow-xl overflow-hidden
+      transition-all duration-300 ease-out
+      hover:shadow-2xl hover:scale-[1.01]
+      ${isDarkMode 
+        ? 'bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50' 
+        : 'bg-gradient-to-br from-white/70 via-white/50 to-gray-50/70'
+      }
+      backdrop-blur-2xl
+      border
+      ${isDarkMode ? 'border-gray-700/40' : 'border-gray-200/40'}
+      h-[200px] w-56
+      relative
+      group
+      cursor-default
+    `}
+  >
+    {/* Animated gradient overlay */}
+    <div className={`
+      absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 ease-out
+      ${isDarkMode 
+        ? 'bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10' 
+        : 'bg-gradient-to-br from-blue-50/40 via-transparent to-indigo-50/30'
+      }
+    `} />
+    
+    {/* Content - Compact 2x2 grid */}
+    <div className="relative h-full flex items-center justify-center p-6">
+      <div className="grid grid-cols-2 gap-4">
+        {/* Top row */}
+        <IconButton
+          icon={<Music size={24} />}
+          onClick={() => {}} // Placeholder for app info/about
+          isDarkMode={isDarkMode}
+        />
+        <IconButton
+          icon={<Book size={24} />}
+          onClick={() => {}} // Placeholder for library/collection view
+          isDarkMode={isDarkMode}
+        />
+        
+        {/* Bottom row */}
+        <IconButton
+          icon={<PlusCircle size={26} />}
+          onClick={onAddNew}
+          isDarkMode={isDarkMode}
+          isPrimary={true}
+          className="relative z-10"
+        />
+        <IconButton
+          icon={<Share2 size={24} />}
+          onClick={() => {}} // Placeholder for sharing functionality
+          isDarkMode={isDarkMode}
+        />
+      </div>
+    </div>
+    
+    {/* Corner accent - now more subtle */}
+    <div className={`
+      absolute top-0 right-0 w-12 h-12 opacity-5 group-hover:opacity-15
+      ${isDarkMode ? 'bg-blue-400' : 'bg-blue-500'}
+      rounded-bl-full
+      transition-all duration-500 ease-out
+      group-hover:scale-110
+    `} />
+    
+    {/* Bottom accent line */}
+    <div className={`
+      absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 w-0 group-hover:w-16
+      ${isDarkMode ? 'bg-blue-400/30' : 'bg-blue-500/30'}
+      transition-all duration-700 ease-out
+      rounded-full
+    `} />
   </div>
 )
 
@@ -295,6 +395,114 @@ const AddNewModal: React.FC<{
 };
 
 /**
+ * Component for the notifications panel
+ */
+const NotificationsPanel: React.FC<{ 
+  isDarkMode: boolean;
+}> = ({ isDarkMode }) => (
+  <div
+    className={`
+      rounded-3xl shadow-xl overflow-hidden
+      transition-all duration-300 ease-out
+      hover:shadow-2xl hover:scale-[1.01]
+      ${isDarkMode 
+        ? 'bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50' 
+        : 'bg-gradient-to-br from-white/70 via-white/50 to-gray-50/70'
+      }
+      backdrop-blur-2xl
+      border
+      ${isDarkMode ? 'border-gray-700/40' : 'border-gray-200/40'}
+      h-[280px] w-56
+      relative
+      group
+      cursor-default
+    `}
+  >
+    {/* Animated gradient overlay */}
+    <div className={`
+      absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 ease-out
+      ${isDarkMode 
+        ? 'bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10' 
+        : 'bg-gradient-to-br from-blue-50/40 via-transparent to-indigo-50/30'
+      }
+    `} />
+    
+    {/* Content */}
+    <div className="relative h-full flex flex-col p-4">
+      <h3 className={`
+        text-sm font-medium mb-3
+        ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}
+      `}>
+        Notifications
+      </h3>
+      
+      {/* Placeholder for notifications */}
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className={`
+          p-3 rounded-lg mb-2
+          ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
+          ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+          text-sm
+        `}>
+          <p className="font-medium">New Sheet Music Added</p>
+          <p className="text-xs opacity-75">2 minutes ago</p>
+        </div>
+        
+        <div className={`
+          p-3 rounded-lg mb-2
+          ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
+          ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+          text-sm
+        `}>
+          <p className="font-medium">Upload Complete</p>
+          <p className="text-xs opacity-75">15 minutes ago</p>
+        </div>
+
+        {/* Additional notifications to demonstrate scrolling */}
+        <div className={`
+          p-3 rounded-lg mb-2
+          ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
+          ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+          text-sm
+        `}>
+          <p className="font-medium">Sheet Music Updated</p>
+          <p className="text-xs opacity-75">1 hour ago</p>
+        </div>
+
+        <div className={`
+          p-3 rounded-lg mb-2
+          ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
+          ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+          text-sm
+        `}>
+          <p className="font-medium">New Version Available</p>
+          <p className="text-xs opacity-75">2 hours ago</p>
+        </div>
+
+        <div className={`
+          p-3 rounded-lg mb-2
+          ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100/50'}
+          ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+          text-sm
+        `}>
+          <p className="font-medium">Backup Completed</p>
+          <p className="text-xs opacity-75">3 hours ago</p>
+        </div>
+      </div>
+    </div>
+    
+    {/* Corner accent */}
+    <div className={`
+      absolute top-0 right-0 w-12 h-12 opacity-5 group-hover:opacity-15
+      ${isDarkMode ? 'bg-blue-400' : 'bg-blue-500'}
+      rounded-bl-full
+      transition-all duration-500 ease-out
+      group-hover:scale-110
+    `} />
+  </div>
+);
+
+/**
  * Main component for the Sheet Music page
  */
 const SheetMusic: React.FC = () => {
@@ -514,22 +722,36 @@ const SheetMusic: React.FC = () => {
             />
           </div>
 
-          {/* Sheet Music Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
-            <AddNewCard 
-              onClick={handleOpenAddNew} 
-              isDarkMode={isDarkMode} 
-            />
-            
-            {filteredItems.map(item => (
-              <SheetMusicCard
-                key={item.id}
-                item={item}
-                onUpdate={handleUpdateItem}
-                onDelete={handleDeleteItem}
-                isNew={item.id === lastAddedId}
+          {/* Main Content Layout */}
+          <div className="flex gap-6">
+            {/* Left Sidebar with Control Panel and Notifications */}
+            <div className="flex-shrink-0 sticky top-24 space-y-4">
+              <ControlPanel 
+                onAddNew={handleOpenAddNew} 
+                isDarkMode={isDarkMode} 
               />
-            ))}
+              <NotificationsPanel isDarkMode={isDarkMode} />
+            </div>
+
+            {/* Sheet Music Grid */}
+            <div className="flex-1">
+              <div 
+                className="grid gap- pb-6"
+                style={{ 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 320px))',
+                }}
+              >
+                {filteredItems.map(item => (
+                  <SheetMusicCard
+                    key={item.id}
+                    item={item}
+                    onUpdate={handleUpdateItem}
+                    onDelete={handleDeleteItem}
+                    isNew={item.id === lastAddedId}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Add New Modal */}
@@ -551,4 +773,4 @@ const SheetMusic: React.FC = () => {
 // Export the component wrapped with API availability check
 export default withApiAvailability(SheetMusic, {
   message: 'Sheet Music Library Unavailable'
-}); 
+});

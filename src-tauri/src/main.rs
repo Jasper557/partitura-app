@@ -1,14 +1,14 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tiny_http::{Server, Response, Method, Header};
+use tiny_http::{Header, Method, Response, Server};
 use url::form_urlencoded;
-use std::io::Read;
-use std::fs::File;
-use std::path::Path;
 
 // State to store the authentication code received by the server
 struct AuthState {
@@ -16,12 +16,13 @@ struct AuthState {
     received: bool,
 }
 
-static AUTH_STATE: once_cell::sync::Lazy<Arc<Mutex<AuthState>>> = once_cell::sync::Lazy::new(|| {
-    Arc::new(Mutex::new(AuthState {
-        code: None,
-        received: false,
-    }))
-});
+static AUTH_STATE: once_cell::sync::Lazy<Arc<Mutex<AuthState>>> =
+    once_cell::sync::Lazy::new(|| {
+        Arc::new(Mutex::new(AuthState {
+            code: None,
+            received: false,
+        }))
+    });
 
 // Use a fixed port for the callback server to match redirect URLs in OAuth providers
 const AUTH_CALLBACK_PORT: u16 = 43123;
@@ -37,7 +38,10 @@ fn open_url_in_browser(url: String) -> Result<(), String> {
 
 #[tauri::command]
 fn get_free_port() -> u16 {
-    println!("get_free_port called, returning fixed port: {}", AUTH_CALLBACK_PORT);
+    println!(
+        "get_free_port called, returning fixed port: {}",
+        AUTH_CALLBACK_PORT
+    );
     // For backward compatibility, but we're now using a fixed port
     AUTH_CALLBACK_PORT
 }
@@ -46,23 +50,28 @@ fn get_free_port() -> u16 {
 fn serve_icon() -> Response<std::io::Cursor<Vec<u8>>> {
     // First try to load from the bundled resources (for production)
     let icon_data = include_bytes!("../icons/icon.png");
-    
-    Response::from_data(icon_data.to_vec())
-        .with_header(Header {
-            field: "Content-Type".parse().unwrap(),
-            value: "image/png".parse().unwrap(),
-        })
+
+    Response::from_data(icon_data.to_vec()).with_header(Header {
+        field: "Content-Type".parse().unwrap(),
+        value: "image/png".parse().unwrap(),
+    })
 }
 
 #[tauri::command]
 async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, String> {
     // Ensure we use the fixed port regardless of what was passed
     let actual_port = AUTH_CALLBACK_PORT;
-    println!("listen_for_auth_callback called with port {}, using fixed port: {}", port, actual_port);
+    println!(
+        "listen_for_auth_callback called with port {}, using fixed port: {}",
+        port, actual_port
+    );
     let addr = format!("127.0.0.1:{}", actual_port);
-    
-    println!("Starting auth callback server on fixed port: {}", actual_port);
-    
+
+    println!(
+        "Starting auth callback server on fixed port: {}",
+        actual_port
+    );
+
     // Try to bind to the port
     let server = match Server::http(&addr) {
         Ok(server) => server,
@@ -72,23 +81,23 @@ async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, Str
             return Err(error_msg);
         }
     };
-    
+
     println!("Auth callback server started on {}", addr);
-    
+
     {
         let mut state = AUTH_STATE.lock().unwrap();
         state.received = false;
         state.code = None;
     }
-    
+
     let state_clone = Arc::clone(&AUTH_STATE);
     let server = Arc::new(server);
     let server_clone = Arc::clone(&server);
-    
+
     thread::spawn(move || {
         let start_time = Instant::now();
         let timeout_duration = Duration::from_secs(timeout);
-        
+
         while start_time.elapsed() < timeout_duration {
             {
                 let state = state_clone.lock().unwrap();
@@ -97,11 +106,11 @@ async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, Str
                     break;
                 }
             }
-            
+
             match server_clone.recv_timeout(Duration::from_secs(1)) {
                 Ok(Some(mut request)) => {
                     println!("Received request: {} {}", request.method(), request.url());
-                    
+
                     // Try to get the raw request content if any
                     let mut content = String::new();
                     match request.body_length() {
@@ -110,49 +119,51 @@ async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, Str
                             if let Ok(size) = reader.read_to_string(&mut content) {
                                 println!("Request body content ({} bytes): {}", size, content);
                             }
-                        },
+                        }
                         _ => {}
                     }
-                    
-                    let mut response = Response::from_string("Invalid request")
-                        .with_status_code(400); // Default fallback response
-                    
+
+                    let mut response =
+                        Response::from_string("Invalid request").with_status_code(400); // Default fallback response
+
                     // Check if this is a request for the icon
                     if request.url().starts_with("/icon.png") && request.method() == &Method::Get {
                         response = serve_icon();
                     }
-                    // Handle auth-callback requests 
-                    else if request.url().starts_with("/auth-callback") && request.method() == &Method::Get {
+                    // Handle auth-callback requests
+                    else if request.url().starts_with("/auth-callback")
+                        && request.method() == &Method::Get
+                    {
                         let full_url = format!("http://localhost:{}{}", actual_port, request.url());
                         println!("Auth callback full URL: {}", full_url);
-                        
+
                         // Extract and log all headers for debugging
                         println!("Request headers:");
                         for header in request.headers() {
                             println!("  {}: {}", header.field.as_str(), header.value.as_str());
                         }
-                        
+
                         // Check for URL fragment directly in the URL (may not be present in headers)
                         let uri = request.url();
                         println!("Auth callback URI path: {}", uri);
-                        
+
                         // Check for fragment or query parameters
                         if uri.contains("#") {
                             println!("Found # in URL, extracting fragment");
                             // Parse the fragment part (after #)
                             let fragment = uri.split('#').nth(1).unwrap_or("");
                             println!("Auth fragment: {}", fragment);
-                            
+
                             // Parse the fragment
                             for (key, value) in form_urlencoded::parse(fragment.as_bytes()) {
                                 println!("Fragment param: {} = {}", key, value);
                                 if key == "access_token" {
                                     println!("Found access token in fragment: {}", value);
-                                    
+
                                     let mut state = state_clone.lock().unwrap();
                                     state.code = Some(value.to_string());
                                     state.received = true;
-                                    
+
                                     response = create_success_response();
                                     break;
                                 }
@@ -160,59 +171,61 @@ async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, Str
                         } else {
                             println!("No fragment found in URL");
                         }
-                        
+
                         // Try to get hash fragment from referrer header if available
-                        let referrer = request.headers().iter()
+                        let referrer = request
+                            .headers()
+                            .iter()
                             .find(|h| h.field.as_str().to_ascii_lowercase() == "referer")
                             .map(|h| h.value.as_str());
-                            
+
                         if let Some(ref_url) = referrer {
                             println!("Found referrer: {}", ref_url);
                             if ref_url.contains("#") {
                                 let fragment = ref_url.split('#').nth(1).unwrap_or("");
                                 println!("Referrer fragment: {}", fragment);
-                                
+
                                 // Parse the fragment from referrer
                                 for (key, value) in form_urlencoded::parse(fragment.as_bytes()) {
                                     println!("Referrer fragment param: {} = {}", key, value);
                                     if key == "access_token" {
                                         println!("Found access token in referrer: {}", value);
-                                        
+
                                         let mut state = state_clone.lock().unwrap();
                                         state.code = Some(value.to_string());
                                         state.received = true;
-                                        
+
                                         response = create_success_response();
                                         break;
                                     }
                                 }
                             }
                         }
-                        
+
                         // Also check for code in query parameters
                         let query = uri.split('?').nth(1).unwrap_or("");
                         println!("Query string: {}", query);
-                        
+
                         for (key, value) in form_urlencoded::parse(query.as_bytes()) {
                             println!("Query param: {} = {}", key, value);
                             if key == "code" || key == "access_token" {
                                 println!("Found auth code/token in query param: {}", value);
-                                
+
                                 let mut state = state_clone.lock().unwrap();
                                 state.code = Some(value.to_string());
                                 state.received = true;
-                                
+
                                 response = create_success_response();
                                 break;
                             }
                         }
                     }
-                    
+
                     // Always serve the success page for auth-callback URLs to handle the token with JS
                     if request.url().starts_with("/auth-callback") {
                         response = create_success_response();
                     }
-                    
+
                     // respond only once per request
                     if let Err(e) = request.respond(response) {
                         println!("Failed to send response: {}", e);
@@ -227,27 +240,27 @@ async fn listen_for_auth_callback(port: u16, timeout: u64) -> Result<String, Str
                 }
             }
         }
-        
+
         println!("Auth callback server stopped");
     });
-    
+
     let start_time = Instant::now();
     let timeout_duration = Duration::from_secs(timeout);
-    
+
     while start_time.elapsed() < timeout_duration {
         let code = {
             let state = AUTH_STATE.lock().unwrap();
             state.code.clone()
         };
-        
+
         if let Some(code) = code {
             println!("Returning auth code/token to application");
             return Ok(code);
         }
-        
+
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    
+
     println!("Timeout waiting for authentication callback");
     Err("Timeout waiting for authentication callback".into())
 }
@@ -500,17 +513,17 @@ fn create_success_response() -> Response<std::io::Cursor<Vec<u8>>> {
     </body>
     </html>
     "#;
-    
-    Response::from_string(success_html)
-        .with_header(Header {
-            field: "Content-Type".parse().unwrap(),
-            value: "text/html".parse().unwrap(),
-        })
+
+    Response::from_string(success_html).with_header(Header {
+        field: "Content-Type".parse().unwrap(),
+        value: "text/html".parse().unwrap(),
+    })
 }
 
 fn main() {
     println!("Starting Partitura application...");
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             get_free_port,
             listen_for_auth_callback,
